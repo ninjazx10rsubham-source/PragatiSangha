@@ -44,4 +44,10 @@ if (fs.existsSync(distHtml)) {
   console.log('✅ root index.html and 404.html updated with compiled production bundle!');
 }
 
+// 5. Copy _redirects to root for Cloudflare Pages SPA support
+const redirectsFile = path.join(rootDir, 'public', '_redirects');
+if (fs.existsSync(redirectsFile)) {
+  fs.copyFileSync(redirectsFile, path.join(rootDir, '_redirects'));
+}
+
 console.log('🎉 Build and direct-deployment bundle ready!');
