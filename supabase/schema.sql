@@ -1,6 +1,6 @@
 -- ==============================================================================
 -- প্রগতি সংঘ শ্রী শ্রী শ্যামা পূজা (Pragati Sangha Shyama Puja)
--- Supabase PostgreSQL Database Schema
+-- Complete Updated Supabase PostgreSQL Database Schema (Safe to re-run anytime)
 -- ==============================================================================
 
 -- 1. Enable UUID Extension
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS members (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Quick migration if table already exists
+-- Ensure previous_year_amount exists on existing table
 ALTER TABLE members ADD COLUMN IF NOT EXISTS previous_year_amount NUMERIC(10, 2) DEFAULT 0;
 
 -- 3. Payments & Chanda Receipts (রসিদ ও পেমেন্ট হিস্ট্রি)
@@ -126,7 +126,7 @@ INSERT INTO settings (id, other_income)
 VALUES ('primary_settings', 0)
 ON CONFLICT (id) DO NOTHING;
 
--- 9. Row Level Security (RLS) - Set to public read/write with anon key for club members
+-- 9. Row Level Security (RLS)
 ALTER TABLE members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE market_entries ENABLE ROW LEVEL SECURITY;
@@ -135,19 +135,35 @@ ALTER TABLE bhog_coupons ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sponsors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
 
+-- Drop and recreate policies safely
+DROP POLICY IF EXISTS "Allow public all access on members" ON members;
 CREATE POLICY "Allow public all access on members" ON members FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow public all access on payments" ON payments;
 CREATE POLICY "Allow public all access on payments" ON payments FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow public all access on market_entries" ON market_entries;
 CREATE POLICY "Allow public all access on market_entries" ON market_entries FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow public all access on expenses" ON expenses;
 CREATE POLICY "Allow public all access on expenses" ON expenses FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow public all access on bhog_coupons" ON bhog_coupons;
 CREATE POLICY "Allow public all access on bhog_coupons" ON bhog_coupons FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow public all access on sponsors" ON sponsors;
 CREATE POLICY "Allow public all access on sponsors" ON sponsors FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow public all access on settings" ON settings;
 CREATE POLICY "Allow public all access on settings" ON settings FOR ALL USING (true) WITH CHECK (true);
 
--- Enable Realtime for all tables
-ALTER PUBLICATION supabase_realtime ADD TABLE members;
-ALTER PUBLICATION supabase_realtime ADD TABLE payments;
-ALTER PUBLICATION supabase_realtime ADD TABLE market_entries;
-ALTER PUBLICATION supabase_realtime ADD TABLE expenses;
-ALTER PUBLICATION supabase_realtime ADD TABLE bhog_coupons;
-ALTER PUBLICATION supabase_realtime ADD TABLE sponsors;
-ALTER PUBLICATION supabase_realtime ADD TABLE settings;
+-- 10. Enable Realtime Publications safely (Ignores if already added)
+DO $$
+BEGIN
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE members, payments, market_entries, expenses, bhog_coupons, sponsors, settings;
+  EXCEPTION
+    WHEN duplicate_object THEN NULL;
+    WHEN others THEN NULL;
+  END;
+END $$;
