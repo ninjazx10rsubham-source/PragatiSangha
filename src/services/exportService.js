@@ -38,6 +38,20 @@ export function exportMembersToExcel(members) {
   exportToExcel(formatted, 'প্রগতি_সংঘ_সদস্য_ও_চাঁদা_তালিকা', 'সদস্য তালিকা');
 }
 
+export function exportPreviousYearMembersToExcel(previousYearMembers) {
+  const formatted = previousYearMembers.map((p, idx) => ({
+    'ক্রমিক': idx + 1,
+    'নাম': p.name,
+    'মোবাইল নম্বর': p.phone || '-',
+    'বাড়ি / ঠিকানা': p.address || '-',
+    'সদস্যপদের ধরন': p.member_type || 'সক্রিয় সদস্য',
+    'বিগত বছরের চাঁদা (₹)': Number(p.previous_year_amount) || 0,
+    'মন্তব্য': p.notes || '-'
+  }));
+
+  exportToExcel(formatted, 'প্রগতি_সংঘ_বিগত_বছরের_খাতা', 'বিগত বছরের খাতা');
+}
+
 export function exportExpensesToExcel(expenses, marketEntries) {
   const wb = XLSX.utils.book_new();
 

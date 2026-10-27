@@ -205,6 +205,18 @@ export default function App() {
               }
             }
 
+            // Sync previous year member deletion
+            if (prev.previousYearMembers && next.previousYearMembers) {
+              const removedPrevIds = prev.previousYearMembers
+                .filter(pm => !next.previousYearMembers.some(nm => nm.id === pm.id))
+                .map(m => m.id);
+              if (removedPrevIds.length) {
+                try {
+                  await supabase.from('previous_year_members').delete().in('id', removedPrevIds);
+                } catch (e) {}
+              }
+            }
+
             if (next.members !== prev.members && next.members?.length) {
               await safeUpsertMembers(supabase, next.members);
             }
@@ -227,6 +239,12 @@ export default function App() {
 
             if (next.sponsors !== prev.sponsors && next.sponsors?.length) {
               await supabase.from('sponsors').upsert(next.sponsors);
+            }
+
+            if (next.previousYearMembers !== prev.previousYearMembers && next.previousYearMembers?.length) {
+              try {
+                await supabase.from('previous_year_members').upsert(next.previousYearMembers);
+              } catch (e) {}
             }
           } catch (err) {
             console.error('Background cloud sync error:', err);

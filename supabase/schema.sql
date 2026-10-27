@@ -97,7 +97,19 @@ CREATE TABLE IF NOT EXISTS sponsors (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 8. Club Settings & Totals (ক্লাব কনফিগারেশন)
+-- 8. Previous Year Members (বিগত বছরের খাতার রেকর্ড)
+CREATE TABLE IF NOT EXISTS previous_year_members (
+  id TEXT PRIMARY KEY DEFAULT ('prev_' || replace(gen_random_uuid()::text, '-', '')),
+  name TEXT NOT NULL,
+  phone TEXT DEFAULT '',
+  address TEXT DEFAULT '',
+  member_type TEXT DEFAULT 'সক্রিয় সদস্য',
+  previous_year_amount NUMERIC(10, 2) DEFAULT 0,
+  notes TEXT DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 9. Club Settings & Totals (ক্লাব কনফিগারেশন)
 CREATE TABLE IF NOT EXISTS settings (
   id TEXT PRIMARY KEY DEFAULT 'primary_settings',
   club_name TEXT DEFAULT 'প্রগতি সংঘ',
@@ -134,6 +146,7 @@ ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bhog_coupons ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sponsors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE previous_year_members ENABLE ROW LEVEL SECURITY;
 
 -- Drop and recreate policies safely
 DROP POLICY IF EXISTS "Allow public all access on members" ON members;
@@ -157,11 +170,14 @@ CREATE POLICY "Allow public all access on sponsors" ON sponsors FOR ALL USING (t
 DROP POLICY IF EXISTS "Allow public all access on settings" ON settings;
 CREATE POLICY "Allow public all access on settings" ON settings FOR ALL USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Allow public all access on previous_year_members" ON previous_year_members;
+CREATE POLICY "Allow public all access on previous_year_members" ON previous_year_members FOR ALL USING (true) WITH CHECK (true);
+
 -- 10. Enable Realtime Publications safely (Ignores if already added)
 DO $$
 BEGIN
   BEGIN
-    ALTER PUBLICATION supabase_realtime ADD TABLE members, payments, market_entries, expenses, bhog_coupons, sponsors, settings;
+    ALTER PUBLICATION supabase_realtime ADD TABLE members, payments, market_entries, expenses, bhog_coupons, sponsors, settings, previous_year_members;
   EXCEPTION
     WHEN duplicate_object THEN NULL;
     WHEN others THEN NULL;

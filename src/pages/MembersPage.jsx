@@ -27,13 +27,14 @@ import {
   Zap,
   Layers,
   CheckCheck,
-  RefreshCw
+  RefreshCw,
+  FileSpreadsheet
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import Modal from '../components/Modal';
 import { formatTaka, toBnDigits } from '../utils/formatters';
-import { exportMembersToExcel, getWhatsAppDueReminderUrl } from '../services/exportService';
-import { deleteMemberFromSupabase, defaultPreviousYearMembers } from '../services/dataService';
+import { exportMembersToExcel, exportPreviousYearMembersToExcel, getWhatsAppDueReminderUrl } from '../services/exportService';
+import { deleteMemberFromSupabase, deletePreviousYearMemberFromSupabase, defaultPreviousYearMembers } from '../services/dataService';
 
 export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }) {
   const [activeMainTab, setActiveMainTab] = useState('current'); // 'current' | 'archive'
@@ -41,7 +42,7 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
   const [statusFilter, setStatusFilter] = useState('সবাই');
   const [diffFilter, setDiffFilter] = useState('সব'); // 'সব', 'বৃদ্ধি', 'হ্রাস', 'একই', 'নতুন'
   const [prevSearch, setPrevSearch] = useState('');
-  const [modalState, setModalState] = useState(null); // { type: 'add' | 'edit' | 'pay' | 'delete', member }
+  const [modalState, setModalState] = useState(null); // { type: 'add' | 'edit' | 'pay' | 'delete' | 'add_prev' | 'edit_prev' | 'delete_prev', member, prevRecord }
   const [autoFilledNotice, setAutoFilledNotice] = useState(null);
 
   const [paymentForm, setPaymentForm] = useState({
@@ -62,39 +63,25 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
     notes: ''
   });
 
+  const [prevRecordForm, setPrevRecordForm] = useState({
+    name: '',
+    phone: '',
+    address: '',
+    member_type: 'সক্রিয় সদস্য',
+    previous_year_amount: '',
+    notes: ''
+  });
+
   const members = db.members || [];
   const membershipTypes = db.settings?.membership_types || [];
 
-  // Consolidate archive list from db.previousYearMembers, defaultPreviousYearMembers, and existing members with past data
+  // Previous year ledger records (Directly bound to editable db.previousYearMembers)
   const previousYearList = useMemo(() => {
-    const map = new Map();
-    // 1. First add from defaultPreviousYearMembers
-    defaultPreviousYearMembers.forEach(item => {
-      map.set(item.name.trim().toLowerCase(), { ...item, source: 'archive' });
-    });
-    // 2. Add from db.previousYearMembers if present
     if (Array.isArray(db.previousYearMembers)) {
-      db.previousYearMembers.forEach(item => {
-        map.set(item.name.trim().toLowerCase(), { ...item, source: 'archive' });
-      });
+      return db.previousYearMembers;
     }
-    // 3. Add from db.members if they have previous_year_amount > 0
-    members.forEach(m => {
-      const key = m.name?.trim().toLowerCase();
-      if (key && !map.has(key) && Number(m.previous_year_amount) > 0) {
-        map.set(key, {
-          id: `prev_${m.id}`,
-          name: m.name,
-          phone: m.phone || '',
-          address: m.address || '',
-          member_type: m.member_type || 'সক্রিয় সদস্য',
-          previous_year_amount: Number(m.previous_year_amount) || 0,
-          notes: m.notes || ''
-        });
-      }
-    });
-    return Array.from(map.values());
-  }, [db.previousYearMembers, members]);
+    return defaultPreviousYearMembers;
+  }, [db.previousYearMembers]);
 
   // Set of names already present in current year
   const currentMembersMap = useMemo(() => {
@@ -174,6 +161,7 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
     return 'আংশিক জমা';
   };
 
+  // --- Current Year Member Handlers ---
   const handleOpenAdd = (prefillData = null) => {
     setAutoFilledNotice(prefillData ? { ...prefillData } : null);
     setMemberForm({
@@ -329,7 +317,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
       payments: [newPayment, ...(prev.payments || [])]
     }));
 
-    // Trigger celebration confetti
     confetti({
       particleCount: 80,
       spread: 70,
@@ -339,7 +326,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
     showToast(`চাঁদা জমা সফল! রসিদ নং: ${receiptNo}`);
     setModalState(null);
 
-    // Open receipt modal right away
     onOpenReceipt(newPayment, { ...member, collected_amount: newCollected });
   };
 
@@ -361,6 +347,125 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
       members: (prev.members || []).filter((m) => m.id !== memberToDelete.id)
     }));
     showToast(`'${memberToDelete.name}' সফলভাবে মুছে ফেলা হয়েছে!`);
+    setModalState(null);
+  };
+
+  // --- Previous Year Ledger Handlers (Editable & Deletable) ---
+  const handleOpenAddPrevRecord = () => {
+    setPrevRecordForm({
+      name: '',
+      phone: '',
+      address: '',
+      member_type: membershipTypes[0]?.name || 'সক্রিয় সদস্য',
+      previous_year_amount: '',
+      notes: ''
+    });
+    setModalState({ type: 'add_prev' });
+  };
+
+  const handleOpenEditPrevRecord = (record) => {
+    setPrevRecordForm({
+      name: record.name,
+      phone: record.phone || '',
+      address: record.address || '',
+      member_type: record.member_type || membershipTypes[0]?.name || 'সক্রিয় সদস্য',
+      previous_year_amount: record.previous_year_amount ?? '',
+      notes: record.notes || ''
+    });
+    setModalState({ type: 'edit_prev', prevRecord: record });
+  };
+
+  const handleSavePrevRecord = (e) => {
+    e.preventDefault();
+    if (!prevRecordForm.name.trim()) {
+      showToast('সদস্যের নাম আবশ্যক', 'error');
+      return;
+    }
+
+    const prevAmt = Number(prevRecordForm.previous_year_amount) || 0;
+
+    if (modalState.type === 'add_prev') {
+      const newRecord = {
+        id: 'prev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        name: prevRecordForm.name.trim(),
+        phone: prevRecordForm.phone.trim(),
+        address: prevRecordForm.address.trim(),
+        member_type: prevRecordForm.member_type,
+        previous_year_amount: prevAmt,
+        notes: prevRecordForm.notes.trim()
+      };
+
+      onUpdateDB(prev => ({
+        ...prev,
+        previousYearMembers: [newRecord, ...(prev.previousYearMembers || defaultPreviousYearMembers)]
+      }));
+
+      showToast(`'${newRecord.name}' বিগত বছরের খাতায় সফলভাবে যোগ করা হয়েছে!`);
+    } else if (modalState.type === 'edit_prev') {
+      const targetRecord = modalState.prevRecord;
+      const oldName = targetRecord.name.trim().toLowerCase();
+      const updatedName = prevRecordForm.name.trim();
+
+      onUpdateDB(prev => {
+        const currentList = prev.previousYearMembers || defaultPreviousYearMembers;
+        const updatedList = currentList.map(p =>
+          p.id === targetRecord.id
+            ? {
+                ...p,
+                name: updatedName,
+                phone: prevRecordForm.phone.trim(),
+                address: prevRecordForm.address.trim(),
+                member_type: prevRecordForm.member_type,
+                previous_year_amount: prevAmt,
+                notes: prevRecordForm.notes.trim()
+              }
+            : p
+        );
+
+        // Synchronize corresponding member in current year if present
+        const updatedMembers = (prev.members || []).map(m => {
+          if (m.name.trim().toLowerCase() === oldName) {
+            return {
+              ...m,
+              previous_year_amount: prevAmt,
+              phone: m.phone || prevRecordForm.phone.trim(),
+              address: m.address || prevRecordForm.address.trim()
+            };
+          }
+          return m;
+        });
+
+        return {
+          ...prev,
+          previousYearMembers: updatedList,
+          members: updatedMembers
+        };
+      });
+
+      showToast(`'${updatedName}'-এর বিগত বছরের তথ্য সফলভাবে হালনাগাদ করা হয়েছে!`);
+    }
+
+    setModalState(null);
+  };
+
+  const handleDeletePrevRecord = async () => {
+    const toDelete = modalState?.prevRecord;
+    if (!toDelete) return;
+
+    try {
+      if (toDelete.id) {
+        await deletePreviousYearMemberFromSupabase(toDelete.id);
+      }
+    } catch (err) {
+      console.error('Error deleting prev member from Supabase:', err);
+    }
+
+    onUpdateDB(prev => ({
+      ...prev,
+      previousYearMembers: (prev.previousYearMembers || defaultPreviousYearMembers).filter(p => p.id !== toDelete.id)
+    }));
+
+    showToast(`'${toDelete.name}'-এর রেকর্ড বিগত বছরের খাতা থেকে মুছে ফেলা হয়েছে!`);
     setModalState(null);
   };
 
@@ -418,25 +523,46 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
             সদস্য ও চাঁদা সংগ্রহ
           </h2>
           <p className="text-xs sm:text-sm text-stone-500">
-            পূর্ববর্তী বছরের তুলনা, চাঁদা বৃদ্ধি/হ্রাস ট্র্যাকিং, অটো-ফেচ ও ডিজিটাল রসিদ
+            পূর্ববর্তী বছরের তুলনা, চাঁদা বৃদ্ধি/হ্রাস ট্র্যাকিং, অটো-ফেচ ও খাতা সম্পাদনা
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => exportMembersToExcel(members)}
-            className="px-3.5 py-2 rounded-xl bg-[#FFFDF7] hover:bg-[#F2E5C9] text-stone-700 border border-[#EADBB6] text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
-          >
-            <Download size={15} />
-            <span>Excel এক্সপোর্ট</span>
-          </button>
-          <button
-            onClick={() => handleOpenAdd()}
-            className="px-4 py-2 rounded-xl bg-[#4A0E17] hover:bg-[#6b1421] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-md"
-          >
-            <Plus size={16} />
-            <span>নতুন সদস্য যোগ করুন</span>
-          </button>
+          {activeMainTab === 'current' ? (
+            <button
+              onClick={() => exportMembersToExcel(members)}
+              className="px-3.5 py-2 rounded-xl bg-[#FFFDF7] hover:bg-[#F2E5C9] text-stone-700 border border-[#EADBB6] text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+            >
+              <Download size={15} />
+              <span>Excel এক্সপোর্ট</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => exportPreviousYearMembersToExcel(previousYearList)}
+              className="px-3.5 py-2 rounded-xl bg-[#FFFDF7] hover:bg-[#F2E5C9] text-stone-700 border border-[#EADBB6] text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+            >
+              <FileSpreadsheet size={15} />
+              <span>খাতা এক্সপোর্ট (Excel)</span>
+            </button>
+          )}
+
+          {activeMainTab === 'current' ? (
+            <button
+              onClick={() => handleOpenAdd()}
+              className="px-4 py-2 rounded-xl bg-[#4A0E17] hover:bg-[#6b1421] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-md"
+            >
+              <Plus size={16} />
+              <span>নতুন সদস্য যোগ করুন</span>
+            </button>
+          ) : (
+            <button
+              onClick={handleOpenAddPrevRecord}
+              className="px-4 py-2 rounded-xl bg-[#4A0E17] hover:bg-[#6b1421] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-md"
+            >
+              <Plus size={16} />
+              <span>বিগত বছরের খাতায় নাম যোগ করুন</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -730,7 +856,7 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
         </div>
       )}
 
-      {/* TAB 2: PREVIOUS YEAR ARCHIVE & AUTO-IMPORT */}
+      {/* TAB 2: PREVIOUS YEAR ARCHIVE & AUTO-IMPORT (ALL EDITABLE & DELETABLE) */}
       {activeMainTab === 'archive' && (
         <div className="space-y-6">
           {/* Archive KPI Summary */}
@@ -738,7 +864,7 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
             <div className="p-4 rounded-2xl bg-[#FFFDF7] border border-[#EADBB6] shadow-xs">
               <span className="text-xs font-bold text-stone-500 uppercase block">বিগত বছরের মোট সদস্য</span>
               <p className="text-xl sm:text-2xl font-extrabold text-[#4A0E17] mt-1">{toBnDigits(archiveTotalCount)} জন</p>
-              <span className="text-[11px] text-stone-500">পুরোনো খাতার রেকর্ড</span>
+              <span className="text-[11px] text-stone-500">সম্পূর্ণ খাতার তালিকা</span>
             </div>
 
             <div className="p-4 rounded-2xl bg-[#FFFDF7] border border-[#EADBB6] shadow-xs">
@@ -773,18 +899,28 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
               />
             </div>
 
-            {archiveRemainingCount > 0 && (
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
               <button
-                onClick={handleBulkImportPrevious}
-                className="w-full sm:w-auto px-4 py-2.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md transition flex items-center justify-center gap-2 shrink-0"
+                onClick={handleOpenAddPrevRecord}
+                className="px-3.5 py-2.5 bg-[#4A0E17] hover:bg-[#6b1421] text-amber-300 rounded-xl text-xs sm:text-sm font-bold shadow-xs transition flex items-center gap-1.5"
               >
-                <Zap size={16} className="text-amber-200 animate-pulse" />
-                <span>বাকি {toBnDigits(archiveRemainingCount)} জনকে এক ক্লিকে চলতি বছরে আনুন (বাল্ক ইম্পোর্ট)</span>
+                <Plus size={15} />
+                <span>নতুন রেকর্ড যোগ করুন</span>
               </button>
-            )}
+
+              {archiveRemainingCount > 0 && (
+                <button
+                  onClick={handleBulkImportPrevious}
+                  className="px-4 py-2.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md transition flex items-center justify-center gap-2"
+                >
+                  <Zap size={16} className="text-amber-200 animate-pulse" />
+                  <span>বাকি {toBnDigits(archiveRemainingCount)} জনকে চলতি বছরে আনুন</span>
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Archive Table */}
+          {/* Archive Table with Full Edit & Delete Options */}
           <div className="bg-[#FFFDF7] rounded-2xl border border-[#EADBB6] shadow-sm overflow-hidden">
             {filteredPreviousList.length === 0 ? (
               <div className="p-12 text-center text-stone-500 text-sm">
@@ -800,6 +936,7 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                       <th className="py-3 px-4">সদস্যপদের ধরন</th>
                       <th className="py-3 px-4">বিগত বছরের চাঁদা</th>
                       <th className="py-3 px-4">চলতি বছরে স্ট্যাটাস</th>
+                      <th className="py-3 px-4">মন্তব্য</th>
                       <th className="py-3 px-4 text-right">অ্যাকশন</th>
                     </tr>
                   </thead>
@@ -854,27 +991,53 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                               </span>
                             )}
                           </td>
+                          <td className="py-3 px-4 text-xs text-stone-500">
+                            {p.notes || '—'}
+                          </td>
                           <td className="py-3 px-4 text-right">
-                            {isImported ? (
+                            <div className="flex items-center justify-end gap-1.5">
+                              {/* Import or View Button */}
+                              {isImported ? (
+                                <button
+                                  onClick={() => {
+                                    setActiveMainTab('current');
+                                    setSearch(p.name);
+                                  }}
+                                  className="px-2.5 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-lg text-xs font-bold transition flex items-center gap-1"
+                                  title="চলতি তালিকায় সদস্যটি দেখুন"
+                                >
+                                  <span>তালিকায় দেখুন</span>
+                                  <ArrowRight size={13} />
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleOpenAdd(p)}
+                                  className="px-2.5 py-1.5 bg-[#4A0E17] hover:bg-[#6b1421] text-amber-300 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-xs"
+                                  title="চলতি বছরে চাঁদা নির্ধারণ করে যুক্ত করুন"
+                                >
+                                  <UserPlus size={13} />
+                                  <span>চলতি বছরে আনুন ⚡</span>
+                                </button>
+                              )}
+
+                              {/* Edit Previous Year Member Record */}
                               <button
-                                onClick={() => {
-                                  setActiveMainTab('current');
-                                  setSearch(p.name);
-                                }}
-                                className="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-lg text-xs font-bold transition flex items-center gap-1 ml-auto"
+                                onClick={() => handleOpenEditPrevRecord(p)}
+                                className="p-1.5 text-stone-600 hover:text-stone-950 hover:bg-stone-200/80 rounded-lg transition"
+                                title="বিগত বছরের তথ্য সম্পাদনা করুন"
                               >
-                                <span>চলতি তালিকায় দেখুন</span>
-                                <ArrowRight size={13} />
+                                <Edit3 size={15} />
                               </button>
-                            ) : (
+
+                              {/* Delete Previous Year Member Record */}
                               <button
-                                onClick={() => handleOpenAdd(p)}
-                                className="px-3 py-1.5 bg-[#4A0E17] hover:bg-[#6b1421] text-amber-300 rounded-lg text-xs font-bold transition flex items-center gap-1 ml-auto shadow-xs"
+                                onClick={() => setModalState({ type: 'delete_prev', prevRecord: p })}
+                                className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition"
+                                title="বিগত বছরের খাতা থেকে রেকর্ডটি মুছে ফেলুন"
                               >
-                                <UserPlus size={14} />
-                                <span>চলতি বছরে আনুন ⚡</span>
+                                <Trash2 size={15} />
                               </button>
-                            )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -887,7 +1050,7 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
         </div>
       )}
 
-      {/* Add / Edit Member Modal */}
+      {/* Add / Edit Current Year Member Modal */}
       {(modalState?.type === 'add' || modalState?.type === 'edit') && (
         <Modal 
           title={modalState.type === 'add' ? 'নতুন নাগরিক ও চাঁদা নির্ধারণ' : 'সদস্যের তথ্য ও চাঁদা সম্পাদনা'} 
@@ -1088,6 +1251,107 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
         </Modal>
       )}
 
+      {/* Add / Edit Previous Year Record Modal */}
+      {(modalState?.type === 'add_prev' || modalState?.type === 'edit_prev') && (
+        <Modal 
+          title={modalState.type === 'add_prev' ? 'বিগত বছরের খাতায় নতুন রেকর্ড যোগ করুন' : `বিগত বছরের রেকর্ড সম্পাদনা: ${modalState.prevRecord.name}`} 
+          onClose={() => setModalState(null)}
+        >
+          <form onSubmit={handleSavePrevRecord} className="space-y-4 text-xs sm:text-sm">
+            <div>
+              <label className="block text-stone-700 font-bold mb-1">সদস্যের পূর্ণ নাম *</label>
+              <input
+                type="text"
+                required
+                value={prevRecordForm.name}
+                onChange={(e) => setPrevRecordForm({ ...prevRecordForm, name: e.target.value })}
+                placeholder="যেমন: শ্রী নিমাই চন্দ্র দাস"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-[#800020] text-sm font-semibold"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-stone-700 font-bold mb-1">বাড়ি / ফ্ল্যাট নং</label>
+                <input
+                  type="text"
+                  value={prevRecordForm.address}
+                  onChange={(e) => setPrevRecordForm({ ...prevRecordForm, address: e.target.value })}
+                  placeholder="যেমন: ১২/এ"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-[#800020]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-stone-700 font-bold mb-1">মোবাইল নম্বর</label>
+                <input
+                  type="tel"
+                  value={prevRecordForm.phone}
+                  onChange={(e) => setPrevRecordForm({ ...prevRecordForm, phone: e.target.value })}
+                  placeholder="যেমন: 9830012345"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-[#800020]"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-stone-700 font-bold mb-1">সদস্যপদের ধরন</label>
+                <select
+                  value={prevRecordForm.member_type}
+                  onChange={(e) => setPrevRecordForm({ ...prevRecordForm, member_type: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-[#800020] bg-white font-medium"
+                >
+                  {membershipTypes.map((t) => (
+                    <option key={t.id || t.name} value={t.name}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-stone-700 font-bold mb-1">বিগত বছরের চাঁদা (₹) *</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  value={prevRecordForm.previous_year_amount}
+                  onChange={(e) => setPrevRecordForm({ ...prevRecordForm, previous_year_amount: e.target.value })}
+                  placeholder="যেমন: 400"
+                  className="w-full px-3.5 py-2.5 rounded-xl border-2 border-amber-300 focus:outline-none focus:ring-2 focus:ring-[#800020] font-bold text-stone-900 bg-amber-50/30"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-stone-700 font-bold mb-1">মন্তব্য (ঐচ্ছিক)</label>
+              <input
+                type="text"
+                value={prevRecordForm.notes}
+                onChange={(e) => setPrevRecordForm({ ...prevRecordForm, notes: e.target.value })}
+                placeholder="যেমন: গত বছর সম্পূর্ণ পরিশোধিত"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-[#800020]"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t">
+              <button
+                type="button"
+                onClick={() => setModalState(null)}
+                className="px-4 py-2 border rounded-xl text-stone-700 hover:bg-stone-100 font-medium"
+              >
+                বাতিল
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2 bg-[#4A0E17] hover:bg-[#6b1421] text-white rounded-xl font-bold shadow-md"
+              >
+                সংরক্ষণ করুন
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
       {/* Collect Payment Modal */}
       {modalState?.type === 'pay' && (
         <Modal 
@@ -1194,12 +1458,12 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
         </Modal>
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Current Year Member Confirmation Modal */}
       {modalState?.type === 'delete' && (
         <Modal title="সদস্য মুছে ফেলার নিশ্চিতকরণ" onClose={() => setModalState(null)}>
           <div className="space-y-4 text-sm">
             <p className="text-stone-700">
-              আপনি কি নিশ্চিতভাবে <span className="font-bold text-[#800020]">{modalState.member.name}</span>-এর যাবতীয় তথ্য মুছে ফেলতে চান?
+              আপনি কি নিশ্চিতভাবে <span className="font-bold text-[#800020]">{modalState.member.name}</span>-এর যাবতীয় তথ্য চলতি বছরের তালিকা থেকে মুছে ফেলতে চান?
             </p>
             <p className="text-xs text-stone-500 bg-rose-50 p-2.5 rounded-lg border border-rose-200">
               ⚠️ এটি সরাসরি ক্লাউড ডাটাবেজ (Supabase) ও ওয়েবসাইট থেকে সদস্যটিকে স্থায়ীভাবে মুছে ফেলবে।
@@ -1213,6 +1477,34 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
               </button>
               <button
                 onClick={handleDeleteMember}
+                className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold"
+              >
+                মুছে ফেলুন
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Delete Previous Year Record Confirmation Modal */}
+      {modalState?.type === 'delete_prev' && (
+        <Modal title="বিগত বছরের রেকর্ড মুছে ফেলার নিশ্চিতকরণ" onClose={() => setModalState(null)}>
+          <div className="space-y-4 text-sm">
+            <p className="text-stone-700">
+              আপনি কি নিশ্চিতভাবে <span className="font-bold text-[#800020]">{modalState.prevRecord.name}</span>-এর বিগত বছরের খাতার রেকর্ডটি মুছে ফেলতে চান?
+            </p>
+            <p className="text-xs text-stone-500 bg-rose-50 p-2.5 rounded-lg border border-rose-200">
+              ⚠️ এটি বিগত বছরের খাতা ও ক্লাউড ডাটাবেজ থেকে এই রেকর্ডটি স্থায়ীভাবে মুছে ফেলবে।
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setModalState(null)}
+                className="px-4 py-2 border rounded-xl text-stone-700 hover:bg-stone-100 font-medium"
+              >
+                বাতিল
+              </button>
+              <button
+                onClick={handleDeletePrevRecord}
                 className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold"
               >
                 মুছে ফেলুন

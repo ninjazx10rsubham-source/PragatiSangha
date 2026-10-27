@@ -85,7 +85,7 @@ export function loadLocalDB() {
           previous_year_amount: Number(m.previous_year_amount) || 0
         }));
       }
-      if (!Array.isArray(parsed.previousYearMembers) || !parsed.previousYearMembers.length) {
+      if (!Array.isArray(parsed.previousYearMembers)) {
         parsed.previousYearMembers = defaultPreviousYearMembers;
       }
       return parsed;
@@ -181,6 +181,19 @@ export async function fetchSupabaseData() {
 
     if (membersRes.error) throw membersRes.error;
 
+    let prevYearData = null;
+    try {
+      const prevRes = await supabase.from('previous_year_members').select('*');
+      if (!prevRes.error && prevRes.data && prevRes.data.length > 0) {
+        prevYearData = prevRes.data;
+      }
+    } catch (e) {
+      // Table doesn't exist yet, fallback to local
+    }
+
+    const localPrev = loadLocalDB().previousYearMembers;
+    const finalPrev = prevYearData || (Array.isArray(localPrev) ? localPrev : defaultPreviousYearMembers);
+
     return {
       members: (membersRes.data || []).map(m => ({
         ...m,
@@ -192,7 +205,7 @@ export async function fetchSupabaseData() {
       bhogCoupons: bhogRes.data || [],
       sponsors: sponsorsRes.data || [],
       settings: settingsRes.data || initialDatabase.settings,
-      previousYearMembers: loadLocalDB().previousYearMembers || defaultPreviousYearMembers,
+      previousYearMembers: finalPrev,
     };
   } catch (err) {
     console.error('Supabase fetch failed:', err);
@@ -230,6 +243,30 @@ export async function deleteMemberFromSupabase(memberId) {
     }
   } catch (err) {
     console.error('Error during Supabase member delete:', err);
+  }
+}
+
+// Safely delete a previous year member from Supabase
+export async function deletePreviousYearMemberFromSupabase(prevId) {
+  const supabase = getSupabaseClient();
+  if (!supabase || !prevId) return;
+  try {
+    const { error } = await supabase.from('previous_year_members').delete().eq('id', prevId);
+    if (!error) {
+      console.log('Previous year member deleted from Supabase:', prevId);
+    }
+  } catch (err) {
+    // Safely ignore if table does not exist
+  }
+}
+
+// Safely upsert previous year members to Supabase if table exists
+export async function safeUpsertPreviousYearMembers(supabase, prevMembers) {
+  if (!supabase || !prevMembers?.length) return;
+  try {
+    await supabase.from('previous_year_members').upsert(prevMembers);
+  } catch (err) {
+    // Safely ignore if table does not exist
   }
 }
 
