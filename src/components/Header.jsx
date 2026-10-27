@@ -52,30 +52,15 @@ export default function Header({
             </button>
           )}
 
-          {/* Cloud Badge */}
-          <button
-            onClick={onOpenCloudSettings}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition border ${
-              isCloudConnected
-                ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
-                : 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
-            }`}
+          {/* Permanent Cloud Status Pill */}
+          <div
+            title="Supabase ক্লাউড ডাটাবেস 24/7 স্থায়ীভাবে সংযুক্ত"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 select-none shadow-xs"
           >
-            {isCloudConnected ? (
-              <>
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <Cloud size={14} className="text-emerald-600 shrink-0" />
-                <span className="hidden sm:inline">Supabase ক্লাউড লাইভ</span>
-              </>
-            ) : (
-              <>
-                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                <CloudOff size={14} className="text-amber-600 shrink-0" />
-                <span className="hidden sm:inline">অফলাইন মোড</span>
-                <span className="underline ml-1 font-bold text-[11px]">সিঙ্ক করুন</span>
-              </>
-            )}
-          </button>
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <Cloud size={14} className="text-emerald-600 shrink-0" />
+            <span className="hidden sm:inline">ক্লাউড সংযুক্ত</span>
+          </div>
 
           {/* Public Portal Switch */}
           <button

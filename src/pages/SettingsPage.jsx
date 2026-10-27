@@ -176,35 +176,30 @@ export default function SettingsPage({
         </p>
       </div>
 
-      {/* Cloud Status Card */}
-      <div className={`p-5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
-        isCloudConnected 
-          ? 'bg-emerald-50/70 border-emerald-300 text-emerald-900' 
-          : 'bg-amber-50/70 border-amber-300 text-amber-900'
-      }`}>
-        <div className="flex items-center gap-3">
-          <div className={`p-3 rounded-xl ${isCloudConnected ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+      {/* Cloud Status Card - Permanent */}
+      <div className="p-5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-emerald-50/80 border-emerald-300 text-emerald-900 shadow-xs">
+        <div className="flex items-center gap-3.5">
+          <div className="p-3 rounded-xl bg-emerald-100 text-emerald-800 shrink-0">
             <Database size={24} />
           </div>
           <div>
             <h3 className="font-bold text-base flex items-center gap-2">
-              <span>{isCloudConnected ? 'Supabase ক্লাউড ডাটাবেস সংযুক্ত' : 'অফলাইন মোড (লোকাল স্টোরেজ)'}</span>
-              {isCloudConnected && <CheckCircle2 size={16} className="text-emerald-600" />}
+              <span>Supabase ক্লাউড ডাটাবেস স্থায়ীভাবে সংযুক্ত ও সক্রিয়</span>
+              <CheckCircle2 size={18} className="text-emerald-600" />
             </h3>
-            <p className="text-xs mt-0.5 opacity-90">
-              {isCloudConnected
-                ? 'রিয়েলটাইম ক্লাউড সিঙ্ক সক্রিয় রয়েছে। একাধিক ফোন থেকে একযোগে কাজ করা যাবে।'
-                : 'বর্তমানে সমস্ত ডেটা এই ব্রাউজারে সেভ রয়েছে। ক্লাউড ব্যাকআপের জন্য Supabase কানেক্ট করুন।'}
+            <p className="text-xs mt-1 text-emerald-800/90 leading-relaxed max-w-2xl">
+              সদস্যপদ, পূর্ববর্তী বছরের চাঁদা বৃদ্ধি/হ্রাস, রসিদ, খরচ এবং ভোগ কুপন সংক্রান্ত যাবতীয় তথ্য স্বয়ংক্রিয়ভাবে সরাসরি ক্লাউডে সেভ হচ্ছে।
+              ব্রাউজার বন্ধ করলে বা লগআউট করলেও ডাটাবেসের সংযোগ কখনোই বিচ্ছিন্ন হবে না এবং সমস্ত ডেটা সুরক্ষিত থাকবে।
             </p>
           </div>
         </div>
 
-        <button
-          onClick={onOpenCloudSettings}
-          className="px-4 py-2 bg-[#4A0E17] hover:bg-[#6b1421] text-amber-300 text-xs font-bold rounded-xl transition shadow-md shrink-0"
-        >
-          ক্লাউড সেটিংস পরিবর্তন
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="px-3.5 py-2 rounded-xl bg-emerald-200/90 text-emerald-950 font-extrabold text-xs flex items-center gap-2 border border-emerald-300 shadow-xs">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse"></span>
+            <span>24/7 লাইভ অটো-সিঙ্ক</span>
+          </span>
+        </div>
       </div>
 
       {/* General Settings */}

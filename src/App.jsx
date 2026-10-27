@@ -3,7 +3,7 @@ import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import Toast from './components/Toast';
 import ReceiptModal from './components/ReceiptModal';
-import SupabaseConfigModal from './components/SupabaseConfigModal';
+import LoginScreen from './components/LoginScreen';
 
 // Pages
 import DashboardPage from './pages/DashboardPage';
@@ -36,10 +36,14 @@ export default function App() {
   const [activeTab, setActiveTabState] = useState(getInitialTab);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCloudConnected, setIsCloudConnected] = useState(true); // Permanent Supabase connection
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    // Check if previously logged in; default to true for smooth desktop use
+    const savedAuth = localStorage.getItem('pragati_admin_auth');
+    return savedAuth !== null ? savedAuth === 'true' : true;
+  });
   
   // Modals & Notifications
   const [receiptState, setReceiptState] = useState(null); // { receipt, member }
-  const [isCloudModalOpen, setIsCloudModalOpen] = useState(false);
   const [toast, setToast] = useState(null); // { message, type }
 
   const showToast = useCallback((message, type = 'success') => {
@@ -195,10 +199,39 @@ export default function App() {
     setReceiptState({ receipt, member });
   };
 
-  const handleOpenCloudSettings = () => {
-    window.history.pushState({ modal: 'cloud', tab: activeTab }, '', '#' + activeTab);
-    setIsCloudModalOpen(true);
+  const handleLogin = () => {
+    setIsAuthenticated(true);
+    localStorage.setItem('pragati_admin_auth', 'true');
+    showToast('অ্যাডমিন প্যানেলে সফলভাবে লগইন হয়েছেন!');
   };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.setItem('pragati_admin_auth', 'false');
+    showToast('লগআউট সম্পন্ন হয়েছে। সমস্ত ক্লাউড ডেটা সম্পূর্ণ সুরক্ষিত রয়েছে।', 'info');
+  };
+
+  // If user is logged out and not viewing the public portal, show the festive LoginScreen
+  if (!isAuthenticated && activeTab !== 'public') {
+    return (
+      <div className="font-bengali">
+        <LoginScreen
+          onLogin={handleLogin}
+          onOpenPublic={() => navigateTo('public')}
+          clubName={db.settings?.club_name}
+          eventName={db.settings?.event_name}
+          storedPin={db.settings?.admin_pin}
+        />
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#FDF8EA] text-[#2D1810] flex flex-col font-bengali">
@@ -206,7 +239,6 @@ export default function App() {
       <Header
         onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
         isCloudConnected={isCloudConnected}
-        onOpenCloudSettings={handleOpenCloudSettings}
         activeTab={activeTab}
         onNavigate={navigateTo}
         onRefresh={checkAndLoadSupabase}
@@ -220,6 +252,7 @@ export default function App() {
             onNavigate={navigateTo}
             isOpen={isSidebarOpen}
             onClose={() => setIsSidebarOpen(false)}
+            onLogout={handleLogout}
           />
         )}
 
@@ -304,7 +337,6 @@ export default function App() {
                 onUpdateDB={updateDB}
                 showToast={showToast}
                 isCloudConnected={isCloudConnected}
-                onOpenCloudSettings={handleOpenCloudSettings}
               />
             )}
 
@@ -330,22 +362,6 @@ export default function App() {
               setReceiptState(null);
             }
           }}
-        />
-      )}
-
-      {/* Supabase Cloud Setup Modal */}
-      {isCloudModalOpen && (
-        <SupabaseConfigModal
-          onClose={() => {
-            if (window.history.state?.modal) {
-              window.history.back();
-            } else {
-              setIsCloudModalOpen(false);
-            }
-          }}
-          onConfigSaved={checkAndLoadSupabase}
-          localDb={db}
-          showToast={showToast}
         />
       )}
 

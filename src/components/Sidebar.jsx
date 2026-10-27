@@ -12,7 +12,8 @@ import {
   Printer, 
   Settings, 
   X,
-  Sparkles
+  Sparkles,
+  LogOut
 } from 'lucide-react';
 
 export const NAV_ITEMS = [
@@ -26,10 +27,10 @@ export const NAV_ITEMS = [
   { id: 'calculator', label: 'বাজেট ক্যালকুলেটর', icon: Calculator },
   { id: 'summary', label: 'আয়-ব্যয় হিসাব', icon: FileSpreadsheet },
   { id: 'reports', label: 'রিপোর্ট ও এক্সেল', icon: Printer },
-  { id: 'settings', label: 'সেটিংস ও ক্লাউড', icon: Settings },
+  { id: 'settings', label: 'সেটিংস ও ব্যাকআপ', icon: Settings },
 ];
 
-export default function Sidebar({ activeTab, onNavigate, isOpen, onClose }) {
+export default function Sidebar({ activeTab, onNavigate, isOpen, onClose, onLogout }) {
   return (
     <>
       {/* Mobile Backdrop */}
@@ -93,6 +94,22 @@ export default function Sidebar({ activeTab, onNavigate, isOpen, onClose }) {
             );
           })}
         </nav>
+
+        {/* Logout Button */}
+        {onLogout && (
+          <div className="p-3 border-t border-[#EADBB6]">
+            <button
+              onClick={() => {
+                if (onClose) onClose();
+                onLogout();
+              }}
+              className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-rose-800 bg-rose-50 hover:bg-rose-100 transition border border-rose-200 shadow-xs"
+            >
+              <LogOut size={15} />
+              <span>লগআউট (লক করুন)</span>
+            </button>
+          </div>
+        )}
 
         {/* Bottom Info */}
         <div className="p-3.5 border-t border-[#EADBB6] bg-gradient-to-b from-[#FFFDF7] to-[#FDF8EA] text-center">
