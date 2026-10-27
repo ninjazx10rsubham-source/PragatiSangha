@@ -122,20 +122,14 @@ export default function App() {
         return;
       }
 
-      // 2. If Cloud Settings modal is open, back button closes it!
-      if (isCloudModalOpen) {
-        setIsCloudModalOpen(false);
-        return;
-      }
-
-      // 3. Otherwise navigate to previous tab from history state or hash
+      // 2. Otherwise navigate to previous tab from history state or hash
       const targetTab = event.state?.tab || window.location.hash.replace(/^#\/?/, '').trim() || 'dashboard';
       setActiveTabState(targetTab);
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [activeTab, receiptState, isCloudModalOpen]);
+  }, [activeTab, receiptState]);
 
   // Update DB handler (Updates local state & triggers Supabase sync when available)
   const updateDB = useCallback((updater) => {
