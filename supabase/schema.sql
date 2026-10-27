@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS members (
   phone TEXT DEFAULT '',
   address TEXT DEFAULT '',
   member_type TEXT NOT NULL DEFAULT 'সক্রিয় সদস্য',
+  previous_year_amount NUMERIC(10, 2) DEFAULT 0, -- পূর্ববর্তী বছরের চাঁদা
   target_amount NUMERIC(10, 2) DEFAULT 0,
   collected_amount NUMERIC(10, 2) DEFAULT 0,
   status TEXT DEFAULT 'বাকি', -- 'বাকি', 'আংশিক জমা', 'জমা হয়েছে'
@@ -23,6 +24,9 @@ CREATE TABLE IF NOT EXISTS members (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Quick migration if table already exists
+ALTER TABLE members ADD COLUMN IF NOT EXISTS previous_year_amount NUMERIC(10, 2) DEFAULT 0;
 
 -- 3. Payments & Chanda Receipts (রসিদ ও পেমেন্ট হিস্ট্রি)
 CREATE TABLE IF NOT EXISTS payments (

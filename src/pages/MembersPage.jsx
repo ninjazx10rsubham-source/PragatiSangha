@@ -13,7 +13,12 @@ import {
   Sparkles,
   CheckCircle2,
   Clock,
-  AlertCircle
+  AlertCircle,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  ArrowUpRight,
+  ArrowDownRight
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import Modal from '../components/Modal';
@@ -22,8 +27,10 @@ import { exportMembersToExcel, getWhatsAppDueReminderUrl } from '../services/exp
 
 export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }) {
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('সবাই');
+  const [statusFilter, setStatusFilter] = useState('সবাই');
+  const [diffFilter, setDiffFilter] = useState('সব'); // 'সব', 'বৃদ্ধি', 'হ্রাস', 'একই', 'নতুন'
   const [modalState, setModalState] = useState(null); // { type: 'add' | 'edit' | 'pay' | 'delete', member }
+  
   const [paymentForm, setPaymentForm] = useState({
     amount: '',
     payment_mode: 'নগদ',
@@ -37,12 +44,19 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
     phone: '',
     address: '',
     member_type: 'সক্রিয় সদস্য',
+    previous_year_amount: 0,
     target_amount: 500,
     notes: ''
   });
 
   const members = db.members || [];
   const membershipTypes = db.settings?.membership_types || [];
+
+  // KPI Computations
+  const totalTarget = members.reduce((sum, m) => sum + (Number(m.target_amount) || 0), 0);
+  const totalPrevious = members.reduce((sum, m) => sum + (Number(m.previous_year_amount) || 0), 0);
+  const totalCollected = members.reduce((sum, m) => sum + (Number(m.collected_amount) || 0), 0);
+  const netGrowth = totalTarget - totalPrevious;
 
   const filteredMembers = useMemo(() => {
     return members.filter((m) => {
@@ -53,10 +67,21 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
         (m.address && m.address.toLowerCase().includes(search.toLowerCase())) ||
         (m.phone && m.phone.includes(search));
       
-      const matchesFilter = filter === 'সবাই' || m.status === filter;
-      return matchesSearch && matchesFilter;
+      const matchesStatus = statusFilter === 'সবাই' || m.status === statusFilter;
+
+      const prev = Number(m.previous_year_amount) || 0;
+      const curr = Number(m.target_amount) || 0;
+      const diff = curr - prev;
+
+      let matchesDiff = true;
+      if (diffFilter === 'বৃদ্ধি') matchesDiff = prev > 0 && diff > 0;
+      else if (diffFilter === 'হ্রাস') matchesDiff = prev > 0 && diff < 0;
+      else if (diffFilter === 'একই') matchesDiff = prev > 0 && diff === 0;
+      else if (diffFilter === 'নতুন') matchesDiff = prev === 0;
+
+      return matchesSearch && matchesStatus && matchesDiff;
     });
-  }, [members, search, filter]);
+  }, [members, search, statusFilter, diffFilter]);
 
   const deriveStatus = (target, collected) => {
     if (collected <= 0) return 'বাকি';
@@ -70,6 +95,7 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
       phone: '',
       address: '',
       member_type: membershipTypes[0]?.name || 'সক্রিয় সদস্য',
+      previous_year_amount: 0,
       target_amount: 500,
       notes: ''
     });
@@ -82,7 +108,8 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
       phone: member.phone || '',
       address: member.address || '',
       member_type: member.member_type,
-      target_amount: member.target_amount,
+      previous_year_amount: Number(member.previous_year_amount) || 0,
+      target_amount: Number(member.target_amount) || 0,
       notes: member.notes || ''
     });
     setModalState({ type: 'edit', member });
@@ -95,6 +122,9 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
       return;
     }
 
+    const prevAmt = Number(memberForm.previous_year_amount) || 0;
+    const targetAmt = Number(memberForm.target_amount) || 0;
+
     if (modalState.type === 'add') {
       const newMember = {
         id: 'mem_' + Date.now(),
@@ -103,10 +133,11 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
         phone: memberForm.phone.trim(),
         address: memberForm.address.trim(),
         member_type: memberForm.member_type,
-        target_amount: Number(memberForm.target_amount) || 0,
+        previous_year_amount: prevAmt,
+        target_amount: targetAmt,
         collected_amount: 0,
         status: 'বাকি',
-        last_payment_date: '',
+        last_payment_date: null,
         notes: memberForm.notes.trim()
       };
       onUpdateDB((prev) => ({
@@ -115,7 +146,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
       }));
       showToast('নতুন সদস্য সফলভাবে যুক্ত হয়েছে!');
     } else if (modalState.type === 'edit') {
-      const target = Number(memberForm.target_amount) || 0;
       onUpdateDB((prev) => ({
         ...prev,
         members: (prev.members || []).map((m) =>
@@ -126,9 +156,10 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                 phone: memberForm.phone.trim(),
                 address: memberForm.address.trim(),
                 member_type: memberForm.member_type,
-                target_amount: target,
+                previous_year_amount: prevAmt,
+                target_amount: targetAmt,
                 notes: memberForm.notes.trim(),
-                status: deriveStatus(target, m.collected_amount)
+                status: deriveStatus(targetAmt, m.collected_amount)
               }
             : m
         )
@@ -194,7 +225,7 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
       payments: [newPayment, ...(prev.payments || [])]
     }));
 
-    // Trigger celebration confetti!
+    // Trigger celebration confetti
     confetti({
       particleCount: 80,
       spread: 70,
@@ -217,6 +248,11 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
     setModalState(null);
   };
 
+  // Helper calculation for live form difference preview
+  const formPrev = Number(memberForm.previous_year_amount) || 0;
+  const formTarget = Number(memberForm.target_amount) || 0;
+  const formDiff = formTarget - formPrev;
+
   return (
     <div className="space-y-6">
       {/* Header bar */}
@@ -226,7 +262,7 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
             সদস্য ও চাঁদা সংগ্রহ
           </h2>
           <p className="text-xs sm:text-sm text-stone-500">
-            নাগরিকদের নির্ধারিত চাঁদা, জমা, বাকি হিসাব ও ডিজিটাল রশিদ
+            পূর্ববর্তী বছরের তুলনা, চাঁদা বৃদ্ধি/হ্রাস ট্র্যাকিং ও ডিজিটাল রসিদ
           </p>
         </div>
 
@@ -243,8 +279,46 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
             className="px-4 py-2 rounded-xl bg-[#4A0E17] hover:bg-[#6b1421] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-md"
           >
             <Plus size={16} />
-            <span>নতুন নাগরিক যুক্ত করুন</span>
+            <span>নতুন সদস্য যোগ করুন</span>
           </button>
+        </div>
+      </div>
+
+      {/* Comparison KPI Summary Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="p-4 rounded-2xl bg-[#FFFDF7] border border-[#EADBB6] shadow-xs">
+          <span className="text-xs font-bold text-stone-500 uppercase block">মোট সদস্য</span>
+          <p className="text-xl sm:text-2xl font-extrabold text-[#4A0E17] mt-1">{toBnDigits(members.length)} জন</p>
+          <span className="text-[11px] text-stone-500">নিবন্ধিত নাগরিক</span>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-[#FFFDF7] border border-[#EADBB6] shadow-xs">
+          <span className="text-xs font-bold text-stone-500 uppercase block">আগের বছরের মোট চাঁদা</span>
+          <p className="text-xl sm:text-2xl font-extrabold text-stone-700 mt-1">{formatTaka(totalPrevious)}</p>
+          <span className="text-[11px] text-stone-500">বিগত বছরের ভিত্তি</span>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-[#FFFDF7] border border-[#EADBB6] shadow-xs">
+          <span className="text-xs font-bold text-stone-500 uppercase block">এই বছরের নির্ধারিত চাঁদা</span>
+          <p className="text-xl sm:text-2xl font-extrabold text-[#4A0E17] mt-1">{formatTaka(totalTarget)}</p>
+          <span className="text-[11px] text-emerald-700 font-semibold">আদায় হয়েছে: {formatTaka(totalCollected)}</span>
+        </div>
+
+        <div className={`p-4 rounded-2xl border shadow-xs ${netGrowth >= 0 ? 'bg-emerald-50/70 border-emerald-300' : 'bg-rose-50/70 border-rose-300'}`}>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase text-stone-700">সামগ্রিক চাঁদার প্রবৃদ্ধি</span>
+            {netGrowth >= 0 ? (
+              <TrendingUp size={16} className="text-emerald-700" />
+            ) : (
+              <TrendingDown size={16} className="text-rose-700" />
+            )}
+          </div>
+          <p className={`text-xl sm:text-2xl font-extrabold mt-1 ${netGrowth >= 0 ? 'text-emerald-800' : 'text-rose-800'}`}>
+            {netGrowth >= 0 ? '+' : ''}{formatTaka(netGrowth)}
+          </p>
+          <span className={`text-[11px] font-bold ${netGrowth >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+            {netGrowth >= 0 ? 'পূর্ববর্তী বছরের চেয়ে বৃদ্ধি' : 'পূর্ববর্তী বছরের চেয়ে হ্রাস'}
+          </span>
         </div>
       </div>
 
@@ -261,14 +335,37 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
           />
         </div>
 
-        {/* Filter Pills */}
+        {/* Change Comparison Filter Pills */}
+        <div className="flex items-center gap-1.5 bg-[#FFFDF7] p-1 rounded-xl border border-stone-200 shrink-0 overflow-x-auto">
+          {[
+            { id: 'সব', label: 'সব চাঁদা' },
+            { id: 'বৃদ্ধি', label: 'বৃদ্ধি 📈' },
+            { id: 'হ্রাস', label: 'হ্রাস 📉' },
+            { id: 'একই', label: 'একই ➖' },
+            { id: 'নতুন', label: 'নতুন 🌟' }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setDiffFilter(tab.id)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+                diffFilter === tab.id
+                  ? 'bg-[#800020] text-white shadow-xs'
+                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Status Pills */}
         <div className="flex items-center gap-1.5 bg-[#FFFDF7] p-1 rounded-xl border border-stone-200 shrink-0 overflow-x-auto">
           {['সবাই', 'জমা হয়েছে', 'আংশিক জমা', 'বাকি'].map((tab) => (
             <button
               key={tab}
-              onClick={() => setFilter(tab)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                filter === tab
+              onClick={() => setStatusFilter(tab)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+                statusFilter === tab
                   ? 'bg-[#4A0E17] text-white shadow-xs'
                   : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
               }`}
@@ -291,10 +388,11 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
               <thead className="bg-[#F7EED3]/70 text-[#4A0E17] font-bold border-b border-[#EADBB6]">
                 <tr>
                   <th className="py-3 px-4">ক্রমিক</th>
-                  <th className="py-3 px-4">নাম ও বিবরণ</th>
+                  <th className="py-3 px-4">নাম ও ঠিকানা</th>
                   <th className="py-3 px-4">সদস্যপদের ধরন</th>
-                  <th className="py-3 px-4">নির্ধারিত</th>
-                  <th className="py-3 px-4">জমা</th>
+                  <th className="py-3 px-4">আগের বছর বনাম বর্তমান</th>
+                  <th className="py-3 px-4">চাঁদার পরিবর্তন</th>
+                  <th className="py-3 px-4">মোট জমা</th>
                   <th className="py-3 px-4">বাকি</th>
                   <th className="py-3 px-4">স্ট্যাটাস</th>
                   <th className="py-3 px-4 text-right">অ্যাকশন</th>
@@ -302,9 +400,11 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
               </thead>
               <tbody className="divide-y divide-stone-100">
                 {filteredMembers.map((m, idx) => {
+                  const prev = Number(m.previous_year_amount) || 0;
                   const target = Number(m.target_amount) || 0;
                   const collected = Number(m.collected_amount) || 0;
                   const due = Math.max(0, target - collected);
+                  const diff = target - prev;
                   const reminderUrl = getWhatsAppDueReminderUrl(m);
 
                   return (
@@ -332,9 +432,43 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                           {m.member_type}
                         </span>
                       </td>
-                      <td className="py-3 px-4 font-semibold text-stone-800">{formatTaka(target)}</td>
+
+                      {/* Previous Year vs Current Year */}
+                      <td className="py-3 px-4">
+                        <div className="text-xs">
+                          <span className="text-stone-500 block">পূর্বে: <b className="text-stone-700 font-semibold">{prev > 0 ? formatTaka(prev) : '০'}</b></span>
+                          <span className="text-stone-900 font-extrabold text-sm block">বর্তমানে: {formatTaka(target)}</span>
+                        </div>
+                      </td>
+
+                      {/* Growth / Difference Badge */}
+                      <td className="py-3 px-4">
+                        {prev === 0 ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-sky-50 text-sky-800 border border-sky-200">
+                            <Sparkles size={12} className="text-sky-600" />
+                            <span>নতুন সদস্য</span>
+                          </span>
+                        ) : diff > 0 ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-xs">
+                            <ArrowUpRight size={13} className="text-emerald-700 font-extrabold" />
+                            <span>+{formatTaka(diff)} বৃদ্ধি</span>
+                          </span>
+                        ) : diff < 0 ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                            <ArrowDownRight size={13} className="text-rose-700 font-extrabold" />
+                            <span>-{formatTaka(Math.abs(diff))} হ্রাস</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-stone-100 text-stone-600 border border-stone-200">
+                            <Minus size={12} />
+                            <span>একই রয়েছে</span>
+                          </span>
+                        )}
+                      </td>
+
                       <td className="py-3 px-4 font-bold text-emerald-700">{formatTaka(collected)}</td>
                       <td className="py-3 px-4 font-bold text-rose-700">{formatTaka(due)}</td>
+                      
                       <td className="py-3 px-4">
                         <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
                           m.status === 'জমা হয়েছে' 
@@ -349,6 +483,7 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                           <span>{m.status}</span>
                         </span>
                       </td>
+
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           {/* Pay Button */}
@@ -405,7 +540,7 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
       {/* Add / Edit Member Modal */}
       {(modalState?.type === 'add' || modalState?.type === 'edit') && (
         <Modal 
-          title={modalState.type === 'add' ? 'নতুন নাগরিক ও চাঁদা নির্ধারণ' : 'সদস্যের তথ্য সম্পাদনা'} 
+          title={modalState.type === 'add' ? 'নতুন নাগরিক ও চাঁদা নির্ধারণ' : 'সদস্যের তথ্য ও চাঁদা সম্পাদনা'} 
           onClose={() => setModalState(null)}
         >
           <form onSubmit={handleSaveMember} className="space-y-4 text-xs sm:text-sm">
@@ -445,29 +580,89 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-stone-700 font-bold mb-1">সদস্যপদের ধরন</label>
-                <select
-                  value={memberForm.member_type}
-                  onChange={(e) => setMemberForm({ ...memberForm, member_type: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-[#800020] bg-white"
-                >
-                  {membershipTypes.map((t) => (
-                    <option key={t.id || t.name} value={t.name}>{t.name}</option>
-                  ))}
-                </select>
+            <div>
+              <label className="block text-stone-700 font-bold mb-1">সদস্যপদের ধরন</label>
+              <select
+                value={memberForm.member_type}
+                onChange={(e) => setMemberForm({ ...memberForm, member_type: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-[#800020] bg-white"
+              >
+                {membershipTypes.map((t) => (
+                  <option key={t.id || t.name} value={t.name}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Previous Year vs Current Year Chanda Inputs */}
+            <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200 space-y-3">
+              <span className="text-xs font-bold text-amber-900 block uppercase tracking-wider">
+                চাঁদার তুলনা ও পরিমাণ নির্ধারণ
+              </span>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-stone-700 font-bold mb-1">
+                    পূর্ববর্তী বছরের চাঁদা (₹)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={memberForm.previous_year_amount}
+                    onChange={(e) => setMemberForm({ ...memberForm, previous_year_amount: e.target.value })}
+                    placeholder="যেমন: 400"
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none font-semibold text-stone-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-stone-700 font-bold mb-1">
+                    এই বছরের নির্ধারিত চাঁদা (₹) *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    value={memberForm.target_amount}
+                    onChange={(e) => setMemberForm({ ...memberForm, target_amount: e.target.value })}
+                    placeholder="যেমন: 500"
+                    className="w-full px-3 py-2 rounded-xl border-2 border-[#800020] focus:outline-none font-bold text-[#4A0E17]"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-stone-700 font-bold mb-1">নির্ধারিত চাঁদা (₹)</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={memberForm.target_amount}
-                  onChange={(e) => setMemberForm({ ...memberForm, target_amount: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-[#800020]"
-                />
+              {/* Dynamic Live Difference Box */}
+              <div className="pt-1">
+                {formPrev === 0 ? (
+                  <div className="p-2.5 rounded-lg bg-sky-50 border border-sky-200 text-xs font-bold text-sky-800 flex items-center gap-1.5">
+                    <Sparkles size={14} className="text-sky-600" />
+                    <span>নতুন সদস্য — পূর্ববর্তী বছরের কোনো চাঁদা নথিভুক্ত নেই</span>
+                  </div>
+                ) : formDiff > 0 ? (
+                  <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-300 text-xs font-bold text-emerald-800 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <TrendingUp size={15} className="text-emerald-600 font-extrabold" />
+                      <span>পূর্ববর্তী বছরের তুলনায় চাঁদা বৃদ্ধি পেয়েছে:</span>
+                    </span>
+                    <span className="text-sm font-extrabold text-emerald-900">
+                      +{formatTaka(formDiff)} ({toBnDigits(Math.round((formDiff / formPrev) * 100))}%)
+                    </span>
+                  </div>
+                ) : formDiff < 0 ? (
+                  <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-300 text-xs font-bold text-rose-800 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <TrendingDown size={15} className="text-rose-600 font-extrabold" />
+                      <span>পূর্ববর্তী বছরের তুলনায় চাঁদা হ্রাস পেয়েছে:</span>
+                    </span>
+                    <span className="text-sm font-extrabold text-rose-900">
+                      -{formatTaka(Math.abs(formDiff))} ({toBnDigits(Math.round((Math.abs(formDiff) / formPrev) * 100))}%)
+                    </span>
+                  </div>
+                ) : (
+                  <div className="p-2.5 rounded-lg bg-stone-100 border border-stone-200 text-xs font-bold text-stone-700 flex items-center gap-1.5">
+                    <Minus size={14} />
+                    <span>পূর্ববর্তী বছরের চাঁদার সমান অপরিবর্তিত রাখা হয়েছে</span>
+                  </div>
+                )}
               </div>
             </div>
 

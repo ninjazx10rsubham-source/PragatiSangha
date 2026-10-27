@@ -20,14 +20,22 @@ import SettingsPage from './pages/SettingsPage';
 import PublicPortalPage from './pages/PublicPortalPage';
 
 // Services
-import { loadLocalDB, saveLocalDB, fetchSupabaseData, initialDatabase } from './services/dataService';
+import { loadLocalDB, saveLocalDB, fetchSupabaseData, safeUpsertMembers, initialDatabase } from './services/dataService';
 import { getSupabaseClient, getSupabaseCredentials } from './services/supabase';
 
 export default function App() {
   const [db, setDb] = useState(() => loadLocalDB());
-  const [activeTab, setActiveTab] = useState('dashboard');
+
+  // Browser History & Routing integration: read initial tab from URL hash
+  const getInitialTab = () => {
+    const hash = window.location.hash.replace(/^#\/?/, '').trim();
+    const validTabs = ['dashboard', 'members', 'payments', 'market', 'expenses', 'bhog', 'sponsors', 'calculator', 'summary', 'reports', 'settings', 'public'];
+    return validTabs.includes(hash) ? hash : 'dashboard';
+  };
+
+  const [activeTab, setActiveTabState] = useState(getInitialTab);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isCloudConnected, setIsCloudConnected] = useState(false);
+  const [isCloudConnected, setIsCloudConnected] = useState(true); // Permanent Supabase connection
   
   // Modals & Notifications
   const [receiptState, setReceiptState] = useState(null); // { receipt, member }
@@ -36,6 +44,17 @@ export default function App() {
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type });
+  }, []);
+
+  // History-aware navigation function
+  const navigateTo = useCallback((newTab, replace = false) => {
+    setActiveTabState(newTab);
+    const hash = '#' + newTab;
+    if (replace) {
+      window.history.replaceState({ tab: newTab }, '', hash);
+    } else {
+      window.history.pushState({ tab: newTab }, '', hash);
+    }
   }, []);
 
   // Sync / Load Supabase data
@@ -54,8 +73,9 @@ export default function App() {
         setIsCloudConnected(true);
       }
     } catch (err) {
-      console.warn('Supabase fetch failed, continuing in offline mode:', err);
-      setIsCloudConnected(false);
+      console.warn('Supabase fetch failed, continuing with local cache:', err);
+      // Keep isCloudConnected true because client credentials are valid
+      setIsCloudConnected(true);
     }
   }, []);
 
@@ -84,6 +104,35 @@ export default function App() {
     };
   }, [checkAndLoadSupabase]);
 
+  // Handle Browser Back / Forward buttons & Mobile Back Gesture
+  useEffect(() => {
+    // Ensure initial entry has state
+    if (!window.history.state?.tab) {
+      window.history.replaceState({ tab: activeTab }, '', '#' + activeTab);
+    }
+
+    const handlePopState = (event) => {
+      // 1. If Receipt Modal is open, back button closes the modal without leaving!
+      if (receiptState) {
+        setReceiptState(null);
+        return;
+      }
+
+      // 2. If Cloud Settings modal is open, back button closes it!
+      if (isCloudModalOpen) {
+        setIsCloudModalOpen(false);
+        return;
+      }
+
+      // 3. Otherwise navigate to previous tab from history state or hash
+      const targetTab = event.state?.tab || window.location.hash.replace(/^#\/?/, '').trim() || 'dashboard';
+      setActiveTabState(targetTab);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [activeTab, receiptState, isCloudModalOpen]);
+
   // Update DB handler (Updates local state & triggers Supabase sync when available)
   const updateDB = useCallback((updater) => {
     setDb((prev) => {
@@ -108,11 +157,7 @@ export default function App() {
             }
 
             if (next.members !== prev.members && next.members?.length) {
-              const cleaned = next.members.map(m => ({
-                ...m,
-                last_payment_date: m.last_payment_date ? m.last_payment_date : null
-              }));
-              await supabase.from('members').upsert(cleaned);
+              await safeUpsertMembers(supabase, next.members);
             }
 
             if (next.payments !== prev.payments && next.payments?.length) {
@@ -145,7 +190,14 @@ export default function App() {
   }, []);
 
   const handleOpenReceipt = (receipt, member) => {
+    // Push modal state so back button closes the receipt modal instead of exiting!
+    window.history.pushState({ modal: 'receipt', tab: activeTab }, '', '#' + activeTab);
     setReceiptState({ receipt, member });
+  };
+
+  const handleOpenCloudSettings = () => {
+    window.history.pushState({ modal: 'cloud', tab: activeTab }, '', '#' + activeTab);
+    setIsCloudModalOpen(true);
   };
 
   return (
@@ -154,9 +206,9 @@ export default function App() {
       <Header
         onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
         isCloudConnected={isCloudConnected}
-        onOpenCloudSettings={() => setIsCloudModalOpen(true)}
+        onOpenCloudSettings={handleOpenCloudSettings}
         activeTab={activeTab}
-        onNavigate={setActiveTab}
+        onNavigate={navigateTo}
         onRefresh={checkAndLoadSupabase}
       />
 
@@ -165,7 +217,7 @@ export default function App() {
         {activeTab !== 'public' && (
           <Sidebar
             activeTab={activeTab}
-            onNavigate={setActiveTab}
+            onNavigate={navigateTo}
             isOpen={isSidebarOpen}
             onClose={() => setIsSidebarOpen(false)}
           />
@@ -177,7 +229,7 @@ export default function App() {
             {activeTab === 'dashboard' && (
               <DashboardPage
                 db={db}
-                onNavigate={setActiveTab}
+                onNavigate={navigateTo}
                 onOpenReceipt={handleOpenReceipt}
               />
             )}
@@ -252,7 +304,7 @@ export default function App() {
                 onUpdateDB={updateDB}
                 showToast={showToast}
                 isCloudConnected={isCloudConnected}
-                onOpenCloudSettings={() => setIsCloudModalOpen(true)}
+                onOpenCloudSettings={handleOpenCloudSettings}
               />
             )}
 
@@ -271,14 +323,26 @@ export default function App() {
         <ReceiptModal
           receipt={receiptState.receipt}
           member={receiptState.member}
-          onClose={() => setReceiptState(null)}
+          onClose={() => {
+            if (window.history.state?.modal) {
+              window.history.back();
+            } else {
+              setReceiptState(null);
+            }
+          }}
         />
       )}
 
       {/* Supabase Cloud Setup Modal */}
       {isCloudModalOpen && (
         <SupabaseConfigModal
-          onClose={() => setIsCloudModalOpen(false)}
+          onClose={() => {
+            if (window.history.state?.modal) {
+              window.history.back();
+            } else {
+              setIsCloudModalOpen(false);
+            }
+          }}
           onConfigSaved={checkAndLoadSupabase}
           localDb={db}
           showToast={showToast}

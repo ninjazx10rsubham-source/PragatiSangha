@@ -9,19 +9,31 @@ export function exportToExcel(data, filename, sheetName = 'Sheet1') {
 }
 
 export function exportMembersToExcel(members) {
-  const formatted = members.map((m, idx) => ({
-    'ক্রমিক': m.sl_no || idx + 1,
-    'নাম': m.name,
-    'মোবাইল নম্বর': m.phone || '-',
-    'বাড়ি / ঠিকানা': m.address || '-',
-    'সদস্যপদের ধরন': m.member_type,
-    'নির্ধারিত চাঁদা (₹)': m.target_amount,
-    'মোট জমা (₹)': m.collected_amount,
-    'বাকি (₹)': Math.max(0, m.target_amount - m.collected_amount),
-    'স্ট্যাটাস': m.status,
-    'সর্বশেষ জমার তারিখ': m.last_payment_date || '-',
-    'মন্তব্য': m.notes || '-'
-  }));
+  const formatted = members.map((m, idx) => {
+    const prev = Number(m.previous_year_amount) || 0;
+    const curr = Number(m.target_amount) || 0;
+    const diff = curr - prev;
+    let comparison = 'একই রয়েছে';
+    if (prev === 0) comparison = 'নতুন সদস্য';
+    else if (diff > 0) comparison = `+₹${diff} (বৃদ্ধি)`;
+    else if (diff < 0) comparison = `-₹${Math.abs(diff)} (হ্রাস)`;
+
+    return {
+      'ক্রমিক': m.sl_no || idx + 1,
+      'নাম': m.name,
+      'মোবাইল নম্বর': m.phone || '-',
+      'বাড়ি / ঠিকানা': m.address || '-',
+      'সদস্যপদের ধরন': m.member_type,
+      'আগের বছরের চাঁদা (₹)': prev,
+      'এই বছরের নির্ধারিত চাঁদা (₹)': curr,
+      'পরিবর্তন (বৃদ্ধি/হ্রাস)': comparison,
+      'মোট জমা (₹)': m.collected_amount,
+      'বাকি (₹)': Math.max(0, curr - (m.collected_amount || 0)),
+      'স্ট্যাটাস': m.status,
+      'সর্বশেষ জমার তারিখ': m.last_payment_date || '-',
+      'মন্তব্য': m.notes || '-'
+    };
+  });
 
   exportToExcel(formatted, 'প্রগতি_সংঘ_সদস্য_ও_চাঁদা_তালিকা', 'সদস্য তালিকা');
 }

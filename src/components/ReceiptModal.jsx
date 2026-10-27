@@ -118,6 +118,19 @@ export default function ReceiptModal({ receipt, member, onClose }) {
                 </span>
               </div>
 
+              {member && Number(member.previous_year_amount) > 0 && (
+                <div className="flex items-center justify-between text-xs text-stone-600 bg-amber-50/80 px-3 py-1.5 rounded-lg border border-amber-200/80">
+                  <span>বিগত বছরের চাঁদা: <b className="text-stone-800">{formatTaka(member.previous_year_amount)}</b></span>
+                  <span className={`font-bold ${Number(member.target_amount) > Number(member.previous_year_amount) ? 'text-emerald-700' : (Number(member.target_amount) < Number(member.previous_year_amount) ? 'text-rose-700' : 'text-stone-700')}`}>
+                    {Number(member.target_amount) > Number(member.previous_year_amount) 
+                      ? `+${formatTaka(Number(member.target_amount) - Number(member.previous_year_amount))} বৃদ্ধি পেয়েছে` 
+                      : (Number(member.target_amount) < Number(member.previous_year_amount) 
+                        ? `-${formatTaka(Number(member.previous_year_amount) - Number(member.target_amount))} হ্রাস` 
+                        : 'অপরিবর্তিত রয়েছে')}
+                  </span>
+                </div>
+              )}
+
               {/* Amount Highlight Box */}
               <div className="my-4 p-3 bg-[#4A0E17] text-white rounded-xl flex items-center justify-between">
                 <div>

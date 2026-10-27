@@ -3,6 +3,10 @@ import { createClient } from '@supabase/supabase-js';
 const STORAGE_URL_KEY = 'pragati_supabase_url';
 const STORAGE_KEY_KEY = 'pragati_supabase_key';
 
+// Permanent Default Supabase Project Credentials
+export const DEFAULT_SUPABASE_URL = 'https://tgxvcswjibobhkfouxcw.supabase.co';
+export const DEFAULT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRneHZjc3dqaWJvYmhrZm91eGN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwMjUwNDIsImV4cCI6MjEwODYwMTA0Mn0.oG7_yMEI8z09O3yrkrZaiMCl6o7v44vF92XeB_1cTF8';
+
 export function normalizeSupabaseUrl(rawUrl) {
   if (!rawUrl) return '';
   let url = rawUrl.trim();
@@ -14,11 +18,12 @@ export function normalizeSupabaseUrl(rawUrl) {
 export function getSupabaseCredentials() {
   const customUrl = localStorage.getItem(STORAGE_URL_KEY);
   const customKey = localStorage.getItem(STORAGE_KEY_KEY);
-  const envUrl = import.meta.env.VITE_SUPABASE_URL;
-  const envKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const envUrl = import.meta.env?.VITE_SUPABASE_URL;
+  const envKey = import.meta.env?.VITE_SUPABASE_ANON_KEY;
 
-  const url = normalizeSupabaseUrl(customUrl || envUrl || '');
-  const key = (customKey || envKey || '').trim();
+  // Prioritize custom -> env -> permanent default so it NEVER disconnects
+  const url = normalizeSupabaseUrl(customUrl || envUrl || DEFAULT_SUPABASE_URL);
+  const key = (customKey || envKey || DEFAULT_SUPABASE_KEY).trim();
 
   return { url, key, isCustom: !!customUrl };
 }
@@ -51,7 +56,10 @@ export function getSupabaseClient() {
 
   try {
     supabaseInstance = createClient(url, key, {
-      auth: { persistSession: false }
+      auth: { 
+        persistSession: true,
+        autoRefreshToken: true 
+      }
     });
     currentUrl = url;
     currentKey = key;
@@ -63,8 +71,8 @@ export function getSupabaseClient() {
 }
 
 export async function testSupabaseConnection(rawUrl, rawKey) {
-  const url = normalizeSupabaseUrl(rawUrl);
-  const key = (rawKey || '').trim();
+  const url = normalizeSupabaseUrl(rawUrl || DEFAULT_SUPABASE_URL);
+  const key = (rawKey || DEFAULT_SUPABASE_KEY).trim();
 
   if (!url || !key) {
     return { success: false, message: 'URL এবং Anon Key উভয়ই প্রদান করুন' };

@@ -22,9 +22,9 @@ export const defaultExpenseCategories = [
 
 export const initialDatabase = {
   members: [
-    { id: 'mem_1', sl_no: 1, name: 'শ্রী নিমাই চন্দ্র দাস', phone: '9830012345', address: '১২/এ', member_type: 'সক্রিয় সদস্য', target_amount: 500, collected_amount: 500, status: 'জমা হয়েছে', last_payment_date: '2026-09-01', notes: '' },
-    { id: 'mem_2', sl_no: 2, name: 'শ্রীমতী রীনা মুখার্জী', phone: '9831198765', address: '৭/বি', member_type: 'পাড়ার নাগরিক বৃন্দ', target_amount: 500, collected_amount: 300, status: 'আংশিক জমা', last_payment_date: '2026-09-03', notes: 'বাকি টাকা পূজার আগে দেবেন' },
-    { id: 'mem_3', sl_no: 3, name: 'শ্রী তাপস ঘোষ', phone: '9876543210', address: '২৩', member_type: 'সক্রিয় সদস্য', target_amount: 1000, collected_amount: 0, status: 'বাকি', last_payment_date: null, notes: '' },
+    { id: 'mem_1', sl_no: 1, name: 'শ্রী নিমাই চন্দ্র দাস', phone: '9830012345', address: '১২/এ', member_type: 'সক্রিয় সদস্য', previous_year_amount: 400, target_amount: 500, collected_amount: 500, status: 'জমা হয়েছে', last_payment_date: '2026-09-01', notes: '' },
+    { id: 'mem_2', sl_no: 2, name: 'শ্রীমতী রীনা মুখার্জী', phone: '9831198765', address: '৭/বি', member_type: 'পাড়ার নাগরিক বৃন্দ', previous_year_amount: 500, target_amount: 500, collected_amount: 300, status: 'আংশিক জমা', last_payment_date: '2026-09-03', notes: 'বাকি টাকা পূজার আগে দেবেন' },
+    { id: 'mem_3', sl_no: 3, name: 'শ্রী তাপস ঘোষ', phone: '9876543210', address: '২৩', member_type: 'সক্রিয় সদস্য', previous_year_amount: 1100, target_amount: 1000, collected_amount: 0, status: 'বাকি', last_payment_date: null, notes: '' },
   ],
   payments: [
     { id: 'pay_1', receipt_no: 'PS-2026-0001', member_id: 'mem_1', member_name: 'শ্রী নিমাই চন্দ্র দাস', amount: 500, payment_date: '2026-09-01', payment_mode: 'নগদ', collected_by: 'কোষাধ্যক্ষ', notes: 'সম্পূর্ণ চাঁদা জমা' },
@@ -63,7 +63,15 @@ export function loadLocalDB() {
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (raw) {
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      // Ensure previous_year_amount exists on members
+      if (Array.isArray(parsed.members)) {
+        parsed.members = parsed.members.map((m) => ({
+          ...m,
+          previous_year_amount: Number(m.previous_year_amount) || 0
+        }));
+      }
+      return parsed;
     }
 
     // Try importing from legacy single HTML storage if present
@@ -79,6 +87,7 @@ export function loadLocalDB() {
           phone: m.মোবাইল || '',
           address: m.বাড়ি || '',
           member_type: m.ধরন || 'সক্রিয় সদস্য',
+          previous_year_amount: Number(m.আগেরচাঁদা || m.previous_year_amount) || 0,
           target_amount: Number(m.নির্ধারিতচাঁদা) || 0,
           collected_amount: Number(m.জমা) || 0,
           status: m.status || (m.জমা >= m.নির্ধারিতচাঁদা && m.নির্ধারিতচাঁদা > 0 ? 'জমা হয়েছে' : (m.জমা > 0 ? 'আংশিক জমা' : 'বাকি')),
@@ -156,7 +165,10 @@ export async function fetchSupabaseData() {
     if (membersRes.error) throw membersRes.error;
 
     return {
-      members: membersRes.data || [],
+      members: (membersRes.data || []).map(m => ({
+        ...m,
+        previous_year_amount: Number(m.previous_year_amount) || 0
+      })),
       payments: paymentsRes.data || [],
       marketEntries: marketRes.data || [],
       expenses: expensesRes.data || [],
@@ -167,6 +179,23 @@ export async function fetchSupabaseData() {
   } catch (err) {
     console.error('Supabase fetch failed:', err);
     throw err;
+  }
+}
+
+// Safe helper to upsert members with fallback if column doesn't exist yet
+export async function safeUpsertMembers(supabase, members) {
+  if (!supabase || !members?.length) return;
+  const cleaned = members.map(m => ({
+    ...m,
+    previous_year_amount: Number(m.previous_year_amount) || 0,
+    last_payment_date: m.last_payment_date ? m.last_payment_date : null
+  }));
+
+  const { error } = await supabase.from('members').upsert(cleaned);
+  if (error && (error.code === '42703' || error.message?.includes('previous_year_amount'))) {
+    // If column doesn't exist yet on Supabase, strip previous_year_amount and retry
+    const fallback = cleaned.map(({ previous_year_amount, ...rest }) => rest);
+    await supabase.from('members').upsert(fallback);
   }
 }
 
@@ -189,11 +218,7 @@ export async function pushLocalToSupabase(localDb) {
 
   // Upsert members
   if (localDb.members?.length) {
-    const cleaned = localDb.members.map(m => ({
-      ...m,
-      last_payment_date: m.last_payment_date ? m.last_payment_date : null
-    }));
-    await supabase.from('members').upsert(cleaned);
+    await safeUpsertMembers(supabase, localDb.members);
   }
 
   // Upsert payments
