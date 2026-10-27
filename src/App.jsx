@@ -154,6 +154,57 @@ export default function App() {
               });
             }
 
+            // Sync member deletion if any member was removed
+            if (prev.members && next.members) {
+              const removedMemberIds = prev.members
+                .filter(pm => !next.members.some(nm => nm.id === pm.id))
+                .map(m => m.id);
+              if (removedMemberIds.length) {
+                console.log('Syncing member deletion to Supabase:', removedMemberIds);
+                await supabase.from('members').delete().in('id', removedMemberIds);
+              }
+            }
+
+            // Sync market entry deletion
+            if (prev.marketEntries && next.marketEntries) {
+              const removedMkIds = prev.marketEntries
+                .filter(pm => !next.marketEntries.some(nm => nm.id === pm.id))
+                .map(m => m.id);
+              if (removedMkIds.length) {
+                await supabase.from('market_entries').delete().in('id', removedMkIds);
+              }
+            }
+
+            // Sync expense deletion
+            if (prev.expenses && next.expenses) {
+              const removedExpIds = prev.expenses
+                .filter(pm => !next.expenses.some(nm => nm.id === pm.id))
+                .map(m => m.id);
+              if (removedExpIds.length) {
+                await supabase.from('expenses').delete().in('id', removedExpIds);
+              }
+            }
+
+            // Sync bhog coupon deletion
+            if (prev.bhogCoupons && next.bhogCoupons) {
+              const removedBhogIds = prev.bhogCoupons
+                .filter(pm => !next.bhogCoupons.some(nm => nm.id === pm.id))
+                .map(m => m.id);
+              if (removedBhogIds.length) {
+                await supabase.from('bhog_coupons').delete().in('id', removedBhogIds);
+              }
+            }
+
+            // Sync sponsor deletion
+            if (prev.sponsors && next.sponsors) {
+              const removedSpIds = prev.sponsors
+                .filter(pm => !next.sponsors.some(nm => nm.id === pm.id))
+                .map(m => m.id);
+              if (removedSpIds.length) {
+                await supabase.from('sponsors').delete().in('id', removedSpIds);
+              }
+            }
+
             if (next.members !== prev.members && next.members?.length) {
               await safeUpsertMembers(supabase, next.members);
             }

@@ -20,7 +20,21 @@ export const defaultExpenseCategories = [
   'প্রতিমা', 'প্যান্ডেল', 'পুজো', 'ভোগ', 'সাজসজ্জা', 'আলো', 'সাউন্ড ও মাইক', 'আপ্যায়ন', 'অন্যান্য'
 ];
 
+export const defaultPreviousYearMembers = [
+  { id: 'prev_1', name: 'শ্রী নিমাই চন্দ্র দাস', phone: '9830012345', address: '১২/এ', member_type: 'সক্রিয় সদস্য', previous_year_amount: 400, notes: 'গত বছর সম্পূর্ণ পরিশোধিত' },
+  { id: 'prev_2', name: 'শ্রীমতী রীনা মুখার্জী', phone: '9831198765', address: '৭/বি', member_type: 'পাড়ার নাগরিক বৃন্দ', previous_year_amount: 500, notes: 'গত বছর ৩৫০ জমা ছিল' },
+  { id: 'prev_3', name: 'শ্রী তাপস ঘোষ', phone: '9876543210', address: '২৩', member_type: 'সক্রিয় সদস্য', previous_year_amount: 1100, notes: '' },
+  { id: 'prev_4', name: 'Subham Dey', phone: '9674218151', address: '75/7/8/1', member_type: 'সক্রিয় সদস্য', previous_year_amount: 500, notes: '' },
+  { id: 'prev_5', name: 'Kaushik Dey', phone: '7003238532', address: '75/7/8/1', member_type: 'ক্লাবের সদস্য', previous_year_amount: 450, notes: '' },
+  { id: 'prev_6', name: 'শ্রী বরুণ পাল', phone: '9831200001', address: '১৪/১', member_type: 'পাড়ার নাগরিক বৃন্দ', previous_year_amount: 600, notes: '' },
+  { id: 'prev_7', name: 'শ্রীমতী সুমিতা সেন', phone: '9831200002', address: '১৮/সি', member_type: 'পাড়ার নাগরিক বৃন্দ', previous_year_amount: 350, notes: '' },
+  { id: 'prev_8', name: 'শ্রী অলোক ব্যানার্জী', phone: '9831200003', address: '৫/২', member_type: 'বিশেষ সদস্য', previous_year_amount: 1500, notes: '' },
+  { id: 'prev_9', name: 'শ্রী দীপক সরকার', phone: '9831200004', address: '৯/এ', member_type: 'সহযোগী সদস্য', previous_year_amount: 300, notes: '' },
+  { id: 'prev_10', name: 'শ্রী শ্যামল পাল', phone: '9831200005', address: '৩১', member_type: 'সক্রিয় সদস্য', previous_year_amount: 500, notes: '' }
+];
+
 export const initialDatabase = {
+  previousYearMembers: defaultPreviousYearMembers,
   members: [
     { id: 'mem_1', sl_no: 1, name: 'শ্রী নিমাই চন্দ্র দাস', phone: '9830012345', address: '১২/এ', member_type: 'সক্রিয় সদস্য', previous_year_amount: 400, target_amount: 500, collected_amount: 500, status: 'জমা হয়েছে', last_payment_date: '2026-09-01', notes: '' },
     { id: 'mem_2', sl_no: 2, name: 'শ্রীমতী রীনা মুখার্জী', phone: '9831198765', address: '৭/বি', member_type: 'পাড়ার নাগরিক বৃন্দ', previous_year_amount: 500, target_amount: 500, collected_amount: 300, status: 'আংশিক জমা', last_payment_date: '2026-09-03', notes: 'বাকি টাকা পূজার আগে দেবেন' },
@@ -70,6 +84,9 @@ export function loadLocalDB() {
           ...m,
           previous_year_amount: Number(m.previous_year_amount) || 0
         }));
+      }
+      if (!Array.isArray(parsed.previousYearMembers) || !parsed.previousYearMembers.length) {
+        parsed.previousYearMembers = defaultPreviousYearMembers;
       }
       return parsed;
     }
@@ -175,6 +192,7 @@ export async function fetchSupabaseData() {
       bhogCoupons: bhogRes.data || [],
       sponsors: sponsorsRes.data || [],
       settings: settingsRes.data || initialDatabase.settings,
+      previousYearMembers: loadLocalDB().previousYearMembers || defaultPreviousYearMembers,
     };
   } catch (err) {
     console.error('Supabase fetch failed:', err);
@@ -196,6 +214,22 @@ export async function safeUpsertMembers(supabase, members) {
     // If column doesn't exist yet on Supabase, strip previous_year_amount and retry
     const fallback = cleaned.map(({ previous_year_amount, ...rest }) => rest);
     await supabase.from('members').upsert(fallback);
+  }
+}
+
+// Safely delete a member from Supabase cloud database
+export async function deleteMemberFromSupabase(memberId) {
+  const supabase = getSupabaseClient();
+  if (!supabase || !memberId) return;
+  try {
+    const { error } = await supabase.from('members').delete().eq('id', memberId);
+    if (error) {
+      console.error('Failed to delete member from Supabase:', error);
+    } else {
+      console.log('Member successfully deleted from Supabase:', memberId);
+    }
+  } catch (err) {
+    console.error('Error during Supabase member delete:', err);
   }
 }
 
