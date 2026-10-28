@@ -13,7 +13,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import Modal from '../components/Modal';
-import { initialDatabase } from '../services/dataService';
+import { initialDatabase, resetAllDataToEmpty } from '../services/dataService';
 
 export default function SettingsPage({ 
   db, 
@@ -158,9 +158,15 @@ export default function SettingsPage({
     e.target.value = '';
   };
 
-  const handleResetData = () => {
-    onUpdateDB(initialDatabase);
-    showToast('ডিফল্ট ডেটা রিস্টোর করা হয়েছে');
+  const handleResetData = async () => {
+    try {
+      const emptyDb = await resetAllDataToEmpty();
+      onUpdateDB(emptyDb);
+      showToast('সম্পূর্ণ ডাটাবেজ সফলভাবে খালি করা হয়েছে! এখন নতুন করে ডাটা ইনপুট দিতে পারেন।');
+    } catch (err) {
+      onUpdateDB(initialDatabase);
+      showToast('ডাটাবেজ রিসেট সম্পন্ন হয়েছে।');
+    }
     setConfirmReset(false);
   };
 

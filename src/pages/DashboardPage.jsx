@@ -44,19 +44,37 @@ export default function DashboardPage({ db, onNavigate, onOpenReceipt }) {
   return (
     <div className="space-y-6">
       {/* Welcome Banner */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-[#4A0E17] via-[#800020] to-[#5C101B] text-white shadow-xl relative overflow-hidden">
+      <div className="p-6 sm:p-7 rounded-2xl bg-gradient-to-r from-[#3B0710] via-[#800020] to-[#4A0E17] text-white shadow-xl relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-amber-400/40">
         <div className="absolute right-4 -bottom-6 text-9xl opacity-10 select-none">🪔</div>
-        <div className="relative z-10 max-w-2xl">
-          <span className="inline-block px-3 py-1 rounded-full bg-amber-400/20 text-amber-300 text-xs font-bold mb-2 border border-amber-300/30">
-            ।। শ্রী শ্রী শ্যামা পূজায়ৈ নমঃ ।।
-          </span>
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-wide">
-            {db.settings?.club_name || 'প্রগতি সংঘ'} ড্যাশবোর্ড
-          </h2>
-          <p className="text-stone-200 text-xs sm:text-sm mt-1 leading-relaxed">
-            {db.settings?.event_name || 'শ্রী শ্রী শ্যামা পূজা ২০২৬'} এর সর্বমোট আয়, ব্যয়, চাঁদার রসিদ ও ভাণ্ডারের সামগ্রিক স্থিতি।
-          </p>
+        
+        <div className="flex items-center gap-4 relative z-10">
+          <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-amber-300 shadow-[0_0_20px_rgba(251,191,36,0.5)] shrink-0">
+            <img src="/maa_shyama.jpg" alt="মা শ্যামা" className="w-full h-full object-cover" />
+          </div>
+          <div>
+            <span className="inline-block px-3 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-xs font-bold mb-1 border border-amber-300/30">
+              🌸 ।। শ্রী শ্রী শ্যামা পূজায় নমঃ ।। 🌸
+            </span>
+            <h2 className="text-xl sm:text-2xl font-black tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-amber-100 via-amber-200 to-white">
+              {db.settings?.club_name || 'প্রগতি সংঘ'} ড্যাশবোর্ড
+            </h2>
+            <p className="text-amber-100/90 text-xs sm:text-sm font-medium mt-0.5">
+              {db.settings?.event_name || 'শ্রী শ্রী শ্যামা পূজা ২০২৬'}
+            </p>
+          </div>
         </div>
+
+        {(db.members || []).length === 0 && (
+          <div className="relative z-10">
+            <button
+              onClick={() => onNavigate('members')}
+              className="px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-[#3B0710] font-extrabold rounded-xl text-xs sm:text-sm shadow-md transition flex items-center gap-1.5"
+            >
+              <PlusCircle size={16} />
+              <span>প্রথম সদস্যের চাঁদা ইনপুট দিন</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Primary KPI Grid */}

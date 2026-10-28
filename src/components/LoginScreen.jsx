@@ -32,8 +32,11 @@ export default function LoginScreen({ onLogin, onOpenPublic, clubName, eventName
         <div className="bg-[#FFFDF7] rounded-3xl p-6 sm:p-8 shadow-2xl border border-amber-200/50 space-y-6">
           {/* Header */}
           <div className="text-center space-y-2">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#800020] to-[#4A0E17] flex items-center justify-center text-3xl mx-auto shadow-lg border border-amber-300">
-              🪔
+            <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-amber-400 shadow-xl mx-auto">
+              <img src="/maa_shyama.jpg" alt="মা শ্যামা" className="w-full h-full object-cover" />
+            </div>
+            <div className="text-xs font-extrabold text-amber-800 tracking-wider">
+              🌸 ॥ শ্রী শ্রী শ্যামা পূজায় নমঃ ॥ 🌸
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-[#4A0E17] tracking-tight">
               {clubName || 'প্রগতি সংঘ'}

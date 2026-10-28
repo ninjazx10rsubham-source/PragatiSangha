@@ -4,6 +4,7 @@ import Sidebar from './components/Sidebar';
 import Toast from './components/Toast';
 import ReceiptModal from './components/ReceiptModal';
 import LoginScreen from './components/LoginScreen';
+import WelcomeSplash from './components/WelcomeSplash';
 
 // Pages
 import DashboardPage from './pages/DashboardPage';
@@ -41,6 +42,9 @@ export default function App() {
     const savedAuth = localStorage.getItem('pragati_admin_auth');
     return savedAuth !== null ? savedAuth === 'true' : true;
   });
+
+  // Startup animation with Maa Shyama photo
+  const [showSplash, setShowSplash] = useState(true);
   
   // Modals & Notifications
   const [receiptState, setReceiptState] = useState(null); // { receipt, member }
@@ -278,6 +282,13 @@ export default function App() {
   if (!isAuthenticated && activeTab !== 'public') {
     return (
       <div className="font-bengali">
+        {showSplash && (
+          <WelcomeSplash
+            onComplete={() => setShowSplash(false)}
+            clubName={db.settings?.club_name}
+            eventName={db.settings?.event_name}
+          />
+        )}
         <LoginScreen
           onLogin={handleLogin}
           onOpenPublic={() => navigateTo('public')}
@@ -298,6 +309,15 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#FDF8EA] text-[#2D1810] flex flex-col font-bengali">
+      {/* Startup Opening Animation with Maa Shyama Photo */}
+      {showSplash && (
+        <WelcomeSplash
+          onComplete={() => setShowSplash(false)}
+          clubName={db.settings?.club_name}
+          eventName={db.settings?.event_name}
+        />
+      )}
+
       {/* Top Header */}
       <Header
         onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -305,6 +325,7 @@ export default function App() {
         activeTab={activeTab}
         onNavigate={navigateTo}
         onRefresh={checkAndLoadSupabase}
+        onOpenSplash={() => setShowSplash(true)}
       />
 
       <div className="flex-1 flex overflow-hidden">

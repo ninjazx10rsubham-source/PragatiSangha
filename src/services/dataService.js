@@ -1,6 +1,6 @@
 import { getSupabaseClient } from './supabase';
 
-const LOCAL_STORAGE_KEY = 'pragati_sangha_db_v2';
+const LOCAL_STORAGE_KEY = 'pragati_sangha_db_v4';
 const LEGACY_STORAGE_KEY = 'ppkp_database_v1';
 
 export const defaultMembershipTypes = [
@@ -20,52 +20,21 @@ export const defaultExpenseCategories = [
   'প্রতিমা', 'প্যান্ডেল', 'পুজো', 'ভোগ', 'সাজসজ্জা', 'আলো', 'সাউন্ড ও মাইক', 'আপ্যায়ন', 'অন্যান্য'
 ];
 
-export const defaultPreviousYearMembers = [
-  { id: 'prev_1', name: 'শ্রী নিমাই চন্দ্র দাস', phone: '9830012345', address: '১২/এ', member_type: 'সক্রিয় সদস্য', previous_year_amount: 400, notes: 'গত বছর সম্পূর্ণ পরিশোধিত' },
-  { id: 'prev_2', name: 'শ্রীমতী রীনা মুখার্জী', phone: '9831198765', address: '৭/বি', member_type: 'পাড়ার নাগরিক বৃন্দ', previous_year_amount: 500, notes: 'গত বছর ৩৫০ জমা ছিল' },
-  { id: 'prev_3', name: 'শ্রী তাপস ঘোষ', phone: '9876543210', address: '২৩', member_type: 'সক্রিয় সদস্য', previous_year_amount: 1100, notes: '' },
-  { id: 'prev_4', name: 'Subham Dey', phone: '9674218151', address: '75/7/8/1', member_type: 'সক্রিয় সদস্য', previous_year_amount: 500, notes: '' },
-  { id: 'prev_5', name: 'Kaushik Dey', phone: '7003238532', address: '75/7/8/1', member_type: 'ক্লাবের সদস্য', previous_year_amount: 450, notes: '' },
-  { id: 'prev_6', name: 'শ্রী বরুণ পাল', phone: '9831200001', address: '১৪/১', member_type: 'পাড়ার নাগরিক বৃন্দ', previous_year_amount: 600, notes: '' },
-  { id: 'prev_7', name: 'শ্রীমতী সুমিতা সেন', phone: '9831200002', address: '১৮/সি', member_type: 'পাড়ার নাগরিক বৃন্দ', previous_year_amount: 350, notes: '' },
-  { id: 'prev_8', name: 'শ্রী অলোক ব্যানার্জী', phone: '9831200003', address: '৫/২', member_type: 'বিশেষ সদস্য', previous_year_amount: 1500, notes: '' },
-  { id: 'prev_9', name: 'শ্রী দীপক সরকার', phone: '9831200004', address: '৯/এ', member_type: 'সহযোগী সদস্য', previous_year_amount: 300, notes: '' },
-  { id: 'prev_10', name: 'শ্রী শ্যামল পাল', phone: '9831200005', address: '৩১', member_type: 'সক্রিয় সদস্য', previous_year_amount: 500, notes: '' }
-];
+export const defaultPreviousYearMembers = [];
 
 export const initialDatabase = {
-  previousYearMembers: defaultPreviousYearMembers,
-  members: [
-    { id: 'mem_1', sl_no: 1, name: 'শ্রী নিমাই চন্দ্র দাস', phone: '9830012345', address: '১২/এ', member_type: 'সক্রিয় সদস্য', previous_year_amount: 400, target_amount: 500, collected_amount: 500, status: 'জমা হয়েছে', last_payment_date: '2026-09-01', notes: '' },
-    { id: 'mem_2', sl_no: 2, name: 'শ্রীমতী রীনা মুখার্জী', phone: '9831198765', address: '৭/বি', member_type: 'পাড়ার নাগরিক বৃন্দ', previous_year_amount: 500, target_amount: 500, collected_amount: 300, status: 'আংশিক জমা', last_payment_date: '2026-09-03', notes: 'বাকি টাকা পূজার আগে দেবেন' },
-    { id: 'mem_3', sl_no: 3, name: 'শ্রী তাপস ঘোষ', phone: '9876543210', address: '২৩', member_type: 'সক্রিয় সদস্য', previous_year_amount: 1100, target_amount: 1000, collected_amount: 0, status: 'বাকি', last_payment_date: null, notes: '' },
-  ],
-  payments: [
-    { id: 'pay_1', receipt_no: 'PS-2026-0001', member_id: 'mem_1', member_name: 'শ্রী নিমাই চন্দ্র দাস', amount: 500, payment_date: '2026-09-01', payment_mode: 'নগদ', collected_by: 'কোষাধ্যক্ষ', notes: 'সম্পূর্ণ চাঁদা জমা' },
-    { id: 'pay_2', receipt_no: 'PS-2026-0002', member_id: 'mem_2', member_name: 'শ্রীমতী রীনা মুখার্জী', amount: 300, payment_date: '2026-09-03', payment_mode: 'UPI', collected_by: 'সম্পাদক', notes: '১ম কিস্তি জমা' },
-  ],
-  marketEntries: [
-    { id: 'mk_1', category: 'পুজোর ফুল', shop_name: 'রাধে ফুল ভান্ডার', item_name: 'গাঁদা ও পদ্মফুল', quantity: '৫ কেজি', amount: 800, entry_date: '2026-09-10', notes: '' },
-    { id: 'mk_2', category: 'পুজোর সামগ্রী', shop_name: 'মা তারা ভান্ডার', item_name: 'ধূপ, ঘি, প্রদীপ', quantity: '১ সেট', amount: 1200, entry_date: '2026-09-11', notes: '' },
-  ],
-  expenses: [
-    { id: 'exp_1', title: 'প্রতিমা বায়না', category: 'প্রতিমা', amount: 5000, expense_date: '2026-09-05', paid_by: 'সম্পাদক', bill_no: 'V-101', notes: 'কুমারটুলিতে বায়না' },
-    { id: 'exp_2', title: 'প্যান্ডেল অগ্রিম', category: 'প্যান্ডেল', amount: 10000, expense_date: '2026-09-08', paid_by: 'কোষাধ্যক্ষ', bill_no: 'V-102', notes: 'ডেকোরেটর্সকে অগ্রিম' },
-    { id: 'exp_3', title: 'ফুল সজ্জা', category: 'পুজো', amount: 1500, expense_date: '2026-09-11', paid_by: 'কোষাধ্যক্ষ', bill_no: 'V-103', notes: '' },
-  ],
-  bhogCoupons: [
-    { id: 'bhog_1', house_no: '১২/এ', family_head: 'শ্রী নিমাই চন্দ্র দাস', phone: '9830012345', coupon_count: 4, status: 'দেওয়া হয়েছে', delivered_time: '2026-10-26T20:30:00Z', notes: '' },
-    { id: 'bhog_2', house_no: '৭/বি', family_head: 'শ্রীমতী রীনা মুখার্জী', phone: '9831198765', coupon_count: 3, status: 'বাকি', delivered_time: null, notes: '' },
-    { id: 'bhog_3', house_no: '২৩', family_head: 'শ্রী তাপস ঘোষ', phone: '9876543210', coupon_count: 5, status: 'বাকি', delivered_time: null, notes: '' },
-  ],
-  sponsors: [
-    { id: 'sp_1', sponsor_name: 'দাস ব্রাদার্স জুয়েলার্স', contact_person: 'শ্যামল দাস', phone: '9830001122', banner_type: 'গেট ব্যানার', promised_amount: 15000, paid_amount: 10000, status: 'আংশিক জমা', notes: 'মূল গেটের সামনে তোরণ' },
-    { id: 'sp_2', sponsor_name: 'ঘোষ সুইটস', contact_person: 'অরুণ ঘোষ', phone: '9830003344', banner_type: 'স্টেজ ব্যানার', promised_amount: 5000, paid_amount: 5000, status: 'পরিশোধিত', notes: 'ভোগ মঞ্চের পাশে' },
-  ],
+  previousYearMembers: [],
+  members: [],
+  payments: [],
+  marketEntries: [],
+  expenses: [],
+  bhogCoupons: [],
+  sponsors: [],
   settings: {
     club_name: 'প্রগতি সংঘ',
     event_name: 'শ্রী শ্রী শ্যামা পূজা ২০২৬',
-    other_income: 15000,
+    heading_mantra: 'শ্রী শ্রী শ্যামা পূজায় নমঃ',
+    other_income: 0,
     admin_pin: '1234',
     membership_types: defaultMembershipTypes,
     market_categories: defaultMarketCategories,
@@ -75,69 +44,22 @@ export const initialDatabase = {
 
 export function loadLocalDB() {
   try {
+    // Clean up older cached versions with demo data
+    localStorage.removeItem('pragati_sangha_db_v2');
+    localStorage.removeItem('pragati_sangha_db_v3');
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+
     const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      // Ensure previous_year_amount exists on members
-      if (Array.isArray(parsed.members)) {
-        parsed.members = parsed.members.map((m) => ({
-          ...m,
-          previous_year_amount: Number(m.previous_year_amount) || 0
-        }));
-      }
-      if (!Array.isArray(parsed.previousYearMembers)) {
-        parsed.previousYearMembers = defaultPreviousYearMembers;
-      }
+      if (!Array.isArray(parsed.members)) parsed.members = [];
+      if (!Array.isArray(parsed.payments)) parsed.payments = [];
+      if (!Array.isArray(parsed.marketEntries)) parsed.marketEntries = [];
+      if (!Array.isArray(parsed.expenses)) parsed.expenses = [];
+      if (!Array.isArray(parsed.bhogCoupons)) parsed.bhogCoupons = [];
+      if (!Array.isArray(parsed.sponsors)) parsed.sponsors = [];
+      if (!Array.isArray(parsed.previousYearMembers)) parsed.previousYearMembers = [];
       return parsed;
-    }
-
-    // Try importing from legacy single HTML storage if present
-    const legacyRaw = localStorage.getItem(LEGACY_STORAGE_KEY);
-    if (legacyRaw) {
-      const legacy = JSON.parse(legacyRaw);
-      const migrated = {
-        ...initialDatabase,
-        members: (legacy.members || []).map((m, idx) => ({
-          id: m.id || 'mem_' + idx,
-          sl_no: m.ক্রমিক || idx + 1,
-          name: m.নাম || '',
-          phone: m.মোবাইল || '',
-          address: m.বাড়ি || '',
-          member_type: m.ধরন || 'সক্রিয় সদস্য',
-          previous_year_amount: Number(m.আগেরচাঁদা || m.previous_year_amount) || 0,
-          target_amount: Number(m.নির্ধারিতচাঁদা) || 0,
-          collected_amount: Number(m.জমা) || 0,
-          status: m.status || (m.জমা >= m.নির্ধারিতচাঁদা && m.নির্ধারিতচাঁদা > 0 ? 'জমা হয়েছে' : (m.জমা > 0 ? 'আংশিক জমা' : 'বাকি')),
-          last_payment_date: m.তারিখ || null,
-          notes: m.মন্তব্য || '',
-        })),
-        marketEntries: (legacy.marketEntries || []).map((mk, idx) => ({
-          id: mk.id || 'mk_' + idx,
-          category: mk.বাজার || 'অন্যান্য',
-          shop_name: mk.দোকান || '',
-          item_name: mk.কী || '',
-          quantity: mk.পরিমাণ || '',
-          amount: Number(mk.দাম) || 0,
-          entry_date: mk.তারিখ || '',
-          notes: mk.মন্তব্য || '',
-        })),
-        expenses: (legacy.expenses || []).map((ex, idx) => ({
-          id: ex.id || 'exp_' + idx,
-          title: ex.নাম || '',
-          category: ex.category || 'পুজো',
-          amount: Number(ex.পরিমাণ) || 0,
-          expense_date: ex.তারিখ || '',
-          paid_by: ex.কে || 'কোষাধ্যক্ষ',
-          bill_no: ex.বিল || '',
-          notes: ex.মন্তব্য || '',
-        })),
-        settings: {
-          ...initialDatabase.settings,
-          other_income: Number(legacy.otherIncome) || 0,
-        }
-      };
-      saveLocalDB(migrated);
-      return migrated;
     }
   } catch (err) {
     console.error('Error loading local DB:', err);
@@ -145,6 +67,45 @@ export function loadLocalDB() {
 
   saveLocalDB(initialDatabase);
   return initialDatabase;
+}
+
+export async function resetAllDataToEmpty() {
+  const emptyDb = {
+    ...initialDatabase,
+    members: [],
+    payments: [],
+    marketEntries: [],
+    expenses: [],
+    bhogCoupons: [],
+    sponsors: [],
+    previousYearMembers: [],
+    settings: {
+      ...initialDatabase.settings,
+      other_income: 0
+    }
+  };
+  saveLocalDB(emptyDb);
+  const supabase = getSupabaseClient();
+  if (supabase) {
+    try {
+      await Promise.allSettled([
+        supabase.from('payments').delete().neq('id', '___none___'),
+        supabase.from('members').delete().neq('id', '___none___'),
+        supabase.from('market_entries').delete().neq('id', '___none___'),
+        supabase.from('expenses').delete().neq('id', '___none___'),
+        supabase.from('bhog_coupons').delete().neq('id', '___none___'),
+        supabase.from('sponsors').delete().neq('id', '___none___'),
+        supabase.from('previous_year_members').delete().neq('id', '___none___'),
+        supabase.from('settings').upsert({
+          id: 'primary_settings',
+          club_name: 'প্রগতি সংঘ',
+          event_name: 'শ্রী শ্রী শ্যামা পূজা ২০২৬',
+          other_income: 0
+        })
+      ]);
+    } catch (err) {}
+  }
+  return emptyDb;
 }
 
 export function saveLocalDB(db) {

@@ -10,7 +10,8 @@ import {
   Sparkles,
   Receipt,
   UtensilsCrossed,
-  Printer
+  Printer,
+  Info
 } from 'lucide-react';
 import { formatTaka, toBnDigits } from '../utils/formatters';
 
@@ -30,24 +31,38 @@ export default function PublicPortalPage({ db, onOpenReceipt }) {
   }, [members, search]);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-12">
-      {/* Hero Banner */}
-      <div className="text-center p-8 sm:p-12 rounded-3xl bg-gradient-to-b from-[#4A0E17] via-[#800020] to-[#36080F] text-white shadow-2xl relative overflow-hidden border-2 border-amber-300">
+    <div className="max-w-4xl mx-auto space-y-8 pb-12 font-bengali">
+      {/* Hero Banner with Divine Maa Shyama Image */}
+      <div className="text-center p-8 sm:p-12 rounded-3xl bg-gradient-to-b from-[#4A0E17] via-[#800020] to-[#2B040B] text-white shadow-2xl relative overflow-hidden border-2 border-amber-300">
         <div className="absolute top-2 left-4 text-6xl opacity-10 select-none">🪔</div>
         <div className="absolute bottom-2 right-4 text-6xl opacity-10 select-none">🪔</div>
         
-        <span className="inline-block px-4 py-1.5 rounded-full bg-amber-400/20 text-amber-300 text-xs sm:text-sm font-bold mb-3 border border-amber-300/40">
-          ।। শ্রী শ্রী শ্যামা পূজায়ৈ নমঃ ।।
-        </span>
-        <h1 className="text-3xl sm:text-5xl font-extrabold tracking-wide text-amber-300">
-          {db.settings?.club_name || 'প্রগতি সংঘ'}
-        </h1>
-        <p className="text-lg sm:text-xl font-bold text-stone-200 mt-2">
-          {db.settings?.event_name || 'শ্রী শ্রী শ্যামা পূজা ২০২৬'}
-        </p>
-        <p className="text-xs sm:text-sm text-stone-300 mt-2 max-w-xl mx-auto">
-          পাড়া ও ক্লাবের সকল নাগরিক ও ভক্তবৃন্দকে শ্রী শ্রী শ্যামা পূজার আন্তরিক প্রীতি ও শুভেচ্ছা।
-        </p>
+        {/* Maa Shyama Divine Center Portrait */}
+        <div className="relative inline-block mb-4">
+          <div className="absolute -inset-2 rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-amber-200 opacity-70 blur-md animate-pulse"></div>
+          <div className="relative w-28 h-28 sm:w-36 sm:h-36 rounded-full overflow-hidden border-4 border-amber-300 shadow-[0_0_30px_rgba(251,191,36,0.6)] mx-auto">
+            <img
+              src="/maa_shyama.jpg"
+              alt="মা শ্যামা"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </div>
+
+        <div>
+          <span className="inline-block px-4 py-1.5 rounded-full bg-amber-400/20 text-amber-300 text-xs sm:text-sm font-extrabold mb-3 border border-amber-300/40">
+            🌸 ।। শ্রী শ্রী শ্যামা পূজায় নমঃ ।। 🌸
+          </span>
+          <h1 className="text-2xl sm:text-5xl font-extrabold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-amber-100 via-amber-300 to-amber-100 drop-shadow-sm">
+            {db.settings?.club_name || 'প্রগতি সংঘ'}
+          </h1>
+          <p className="text-base sm:text-xl font-bold text-amber-200/90 mt-2">
+            {db.settings?.event_name || 'শ্রী শ্রী শ্যামা পূজা ২০২৬'}
+          </p>
+          <p className="text-xs sm:text-sm text-stone-200 mt-2 max-w-xl mx-auto leading-relaxed">
+            পাড়া ও ক্লাবের সকল নাগরিক ও ভক্তবৃন্দকে শ্রী শ্রী শ্যামা পূজার আন্তরিক প্রীতি ও শুভেচ্ছা।
+          </p>
+        </div>
       </div>
 
       {/* Puja Schedule Cards */}
@@ -108,10 +123,12 @@ export default function PublicPortalPage({ db, onOpenReceipt }) {
           />
         </div>
 
-        {search.trim() && (
+        {search.trim() ? (
           <div className="space-y-3 pt-2">
             {searchResults.length === 0 ? (
-              <p className="text-center text-xs text-stone-500 py-4">কোনো তথ্য পাওয়া যায়নি। অনুগ্রহ করে সঠিক বানান লিখুন।</p>
+              <p className="text-center text-xs text-stone-500 py-4">
+                কোনো তথ্য পাওয়া যায়নি। অনুগ্রহ করে সঠিক বানান লিখুন অথবা কমিটির সাথে যোগাযোগ করুন।
+              </p>
             ) : (
               searchResults.map((m) => {
                 const recentPay = (db.payments || []).find(p => p.member_id === m.id || p.member_name === m.name);
@@ -150,6 +167,13 @@ export default function PublicPortalPage({ db, onOpenReceipt }) {
               })
             )}
           </div>
+        ) : (
+          members.length === 0 && (
+            <div className="p-4 bg-amber-50/60 rounded-xl border border-amber-200 text-xs text-stone-600 flex items-center gap-2">
+              <Info size={16} className="text-amber-700 shrink-0" />
+              <span>নতুন বছরের চাঁদা সংগ্রহ তালিকা প্রণয়ন চলছে। শীঘ্রই নাগরিক তালিকা অনলাইনে হালনাগাদ হবে।</span>
+            </div>
+          )
         )}
       </div>
 
@@ -182,7 +206,7 @@ export default function PublicPortalPage({ db, onOpenReceipt }) {
       {/* Footer Contact */}
       <div className="p-4 rounded-xl bg-stone-100 text-center text-xs text-stone-600">
         <p className="font-semibold text-stone-800">প্রগতি সংঘ পূজা পরিচালন সমিতি</p>
-        <p className="mt-0.5">যে কোনো প্রয়োজনে যোগাযোগ করুন: সম্পাদক (98300XXXXX) • কোষাধ্যক্ষ (98311XXXXX)</p>
+        <p className="mt-0.5">যে কোনো প্রয়োজনে যোগাযোগ করুন: সম্পাদক বা কোষাধ্যক্ষ</p>
       </div>
     </div>
   );
