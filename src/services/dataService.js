@@ -114,6 +114,9 @@ export function loadLocalDB() {
       }
       if (!Array.isArray(parsed.settings) && !parsed.settings) parsed.settings = { ...initialDatabase.settings };
       if (!parsed.settings) parsed.settings = { ...initialDatabase.settings };
+      if (!Array.isArray(parsed.settings.membership_types) || parsed.settings.membership_types.length === 0) {
+        parsed.settings.membership_types = defaultMembershipTypes;
+      }
       // If puja_schedule is missing or empty array, inject default schedule
       if (!Array.isArray(parsed.settings.puja_schedule) || parsed.settings.puja_schedule.length === 0) {
         parsed.settings.puja_schedule = initialDatabase.settings.puja_schedule;
@@ -228,6 +231,11 @@ export async function fetchSupabaseData() {
     const mergedSettings = {
       ...initialDatabase.settings,
       ...cloudSettings,
+      membership_types: (
+        Array.isArray(cloudSettings.membership_types) && cloudSettings.membership_types.length > 0
+          ? cloudSettings.membership_types
+          : defaultMembershipTypes
+      ),
       puja_schedule: (() => {
         // Priority: cloud schedule > local schedule > built-in default schedule
         if (Array.isArray(cloudSettings.puja_schedule) && cloudSettings.puja_schedule.length > 0) {
