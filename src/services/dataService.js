@@ -39,7 +39,56 @@ export const initialDatabase = {
     membership_types: defaultMembershipTypes,
     market_categories: defaultMarketCategories,
     expense_categories: defaultExpenseCategories,
-    puja_schedule: [],
+    puja_schedule: [
+      {
+        id: 'sch_default_1',
+        title: 'ষষ্ঠ্যাদি কল্পারম্ভ ও মায়ের আবাহন',
+        tithi_or_date: 'কালী পূজার পূর্বরাত্রি',
+        time: 'সন্ধ্যা ৬:০০',
+        category: 'পুজো ও আরতি',
+        notes: 'পূজামণ্ডপে সকলকে উপস্থিত থাকার অনুরোধ করা হচ্ছে'
+      },
+      {
+        id: 'sch_default_2',
+        title: 'মহাকালী পূজা আরম্ভ ও নিশিপূজা',
+        tithi_or_date: 'অমাবস্যা তিথি',
+        time: 'রাত্রি ১১:৩০',
+        category: 'পুজো ও আরতি',
+        notes: 'নিশিপূজায় পুরোহিত মশাই বিশেষ হোম ও যজ্ঞ পরিচালনা করবেন'
+      },
+      {
+        id: 'sch_default_3',
+        title: 'সম্মিলিত পুষ্পাঞ্জলি প্রদান',
+        tithi_or_date: 'কালী পূজার দিন',
+        time: 'ভোর ৫:৩০',
+        category: 'পুষ্পাঞ্জলি',
+        notes: 'পুষ্পাঞ্জলির ফুল, বেলপাতা ও ধূপ ক্লাব প্রাঙ্গণ থেকে দেওয়া হবে'
+      },
+      {
+        id: 'sch_default_4',
+        title: 'মহাভোগ ও মহাপ্রসাদ বিতরণ',
+        tithi_or_date: 'কালী পূজার পরদিন',
+        time: 'দুপুর ১২:০০',
+        category: 'মহাপ্রসাদ ও ভোগ',
+        notes: 'সকল ভক্ত ও পাড়াবাসী মহাপ্রসাদ পাবেন'
+      },
+      {
+        id: 'sch_default_5',
+        title: 'মায়ের বিসর্জন ও শোভাযাত্রা',
+        tithi_or_date: 'কালী পূজার পরদিন',
+        time: 'বিকেল ৫:০০',
+        category: 'শোভাযাত্রা ও বিসর্জন',
+        notes: 'ব্যান্ড পার্টি সহ সকল সদস্যরা শোভাযাত্রায় অংশগ্রহণ করবেন'
+      },
+      {
+        id: 'sch_default_6',
+        title: 'সাংস্কৃতিক সন্ধ্যা ও আলোক সজ্জা উদ্বোধন',
+        tithi_or_date: 'কালী পূজার আগের রাত',
+        time: 'সন্ধ্যা ৭:০০',
+        category: 'সাংস্কৃতিক অনুষ্ঠান',
+        notes: 'সকল বয়সের সদস্যদের সাংস্কৃতিক পরিবেশনা ও আলোচনাসভা'
+      }
+    ],
   }
 };
 
@@ -60,8 +109,12 @@ export function loadLocalDB() {
       if (!Array.isArray(parsed.bhogCoupons)) parsed.bhogCoupons = [];
       if (!Array.isArray(parsed.sponsors)) parsed.sponsors = [];
       if (!Array.isArray(parsed.previousYearMembers)) parsed.previousYearMembers = [];
+      if (!Array.isArray(parsed.settings) && !parsed.settings) parsed.settings = { ...initialDatabase.settings };
       if (!parsed.settings) parsed.settings = { ...initialDatabase.settings };
-      if (!Array.isArray(parsed.settings.puja_schedule)) parsed.settings.puja_schedule = [];
+      // If puja_schedule is missing or empty array, inject default schedule
+      if (!Array.isArray(parsed.settings.puja_schedule) || parsed.settings.puja_schedule.length === 0) {
+        parsed.settings.puja_schedule = initialDatabase.settings.puja_schedule;
+      }
       return parsed;
     }
   } catch (err) {
@@ -155,8 +208,31 @@ export async function fetchSupabaseData() {
       // Table doesn't exist yet, fallback to local
     }
 
-    const localPrev = loadLocalDB().previousYearMembers;
-    const finalPrev = prevYearData || (Array.isArray(localPrev) ? localPrev : defaultPreviousYearMembers);
+    const localForMerge = (() => {
+      try {
+        const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch { return null; }
+    })();
+
+    const finalPrev = prevYearData || (Array.isArray(localForMerge?.previousYearMembers) ? localForMerge.previousYearMembers : defaultPreviousYearMembers);
+    // Merge: Supabase settings + local puja_schedule (in case column missing in cloud)
+    const cloudSettings = settingsRes.data || {};
+    const mergedSettings = {
+      ...initialDatabase.settings,
+      ...cloudSettings,
+      puja_schedule: (() => {
+        // Priority: cloud schedule > local schedule > built-in default schedule
+        if (Array.isArray(cloudSettings.puja_schedule) && cloudSettings.puja_schedule.length > 0) {
+          return cloudSettings.puja_schedule;
+        }
+        const localSchedule = localForMerge?.settings?.puja_schedule;
+        if (Array.isArray(localSchedule) && localSchedule.length > 0) {
+          return localSchedule;
+        }
+        return initialDatabase.settings.puja_schedule; // built-in default
+      })()
+    };
 
     return {
       members: (membersRes.data || []).map(m => ({
@@ -168,7 +244,7 @@ export async function fetchSupabaseData() {
       expenses: expensesRes.data || [],
       bhogCoupons: bhogRes.data || [],
       sponsors: sponsorsRes.data || [],
-      settings: settingsRes.data || initialDatabase.settings,
+      settings: mergedSettings,
       previousYearMembers: finalPrev,
     };
   } catch (err) {
