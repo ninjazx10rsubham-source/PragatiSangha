@@ -933,6 +933,7 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                     <tr>
                       <th className="py-3 px-4">ক্রমিক</th>
                       <th className="py-3 px-4">নাম ও পরিচয়</th>
+                      <th className="py-3 px-4">সদস্যপদের ধরন</th>
                       <th className="py-3 px-4">বিল নং</th>
                       <th className="py-3 px-4">নির্ধারিত চাঁদা</th>
                       <th className="py-3 px-4">জমা দেওয়া পরিমাণ (Paid)</th>
@@ -965,6 +966,11 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                                 </span>
                               )}
                             </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-semibold">
+                              {p.member_type || 'পাড়ার নাগরিক বৃন্দ'}
+                            </span>
                           </td>
                           <td className="py-3 px-4 font-mono font-bold text-stone-600 text-xs">
                             {p.bill_no ? `#${p.bill_no}` : '—'}
