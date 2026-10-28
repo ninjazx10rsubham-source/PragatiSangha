@@ -56,3 +56,63 @@
 .animate-scale-in {
   animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* Print Enhancements */
+@media print {
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+
+  body {
+    background: white !important;
+    color: #1a1a1a !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  /* When schedule printing modal is active, hide everything else */
+  body.schedule-printing-active #root > div > header,
+  body.schedule-printing-active #root > div > div > main,
+  body.schedule-printing-active #root > div > div > aside {
+    display: none !important;
+  }
+
+  body.schedule-printing-active .schedule-print-container {
+    display: block !important;
+    position: static !important;
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  /* When receipt modal is active, hide everything else */
+  body.receipt-printing-active #root > div > header,
+  body.receipt-printing-active #root > div > div > main,
+  body.receipt-printing-active #root > div > div > aside {
+    display: none !important;
+  }
+
+  body.receipt-printing-active .receipt-print-container {
+    display: block !important;
+    position: static !important;
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  tr, .print-avoid-break {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}

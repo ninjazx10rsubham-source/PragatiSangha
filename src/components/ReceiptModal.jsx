@@ -1,10 +1,17 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Printer, Share2, X, CheckCircle, ShieldCheck } from 'lucide-react';
 import { formatTaka, toBnDigits, formatBnDate, numberToBengaliWords } from '../utils/formatters';
 import { getWhatsAppReceiptUrl } from '../services/exportService';
 
 export default function ReceiptModal({ receipt, member, onClose }) {
   if (!receipt) return null;
+
+  useEffect(() => {
+    document.body.classList.add('receipt-printing-active');
+    return () => {
+      document.body.classList.remove('receipt-printing-active');
+    };
+  }, []);
 
   const handlePrint = () => {
     window.print();
@@ -13,8 +20,8 @@ export default function ReceiptModal({ receipt, member, onClose }) {
   const whatsappUrl = member?.phone ? getWhatsAppReceiptUrl(member.phone, receipt) : null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full border border-amber-200 overflow-hidden transform transition-all">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 print:p-0 print:bg-white receipt-print-container">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full border border-amber-200 overflow-hidden transform transition-all print:max-w-none print:w-full print:border-none print:shadow-none print:rounded-none">
         
         {/* Top Control Bar (Hidden on print) */}
         <div className="no-print flex items-center justify-between px-5 py-3.5 bg-[#4A0E17] text-white">

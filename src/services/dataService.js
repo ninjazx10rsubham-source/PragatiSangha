@@ -39,6 +39,7 @@ export const initialDatabase = {
     membership_types: defaultMembershipTypes,
     market_categories: defaultMarketCategories,
     expense_categories: defaultExpenseCategories,
+    puja_schedule: [],
   }
 };
 
@@ -59,6 +60,8 @@ export function loadLocalDB() {
       if (!Array.isArray(parsed.bhogCoupons)) parsed.bhogCoupons = [];
       if (!Array.isArray(parsed.sponsors)) parsed.sponsors = [];
       if (!Array.isArray(parsed.previousYearMembers)) parsed.previousYearMembers = [];
+      if (!parsed.settings) parsed.settings = { ...initialDatabase.settings };
+      if (!Array.isArray(parsed.settings.puja_schedule)) parsed.settings.puja_schedule = [];
       return parsed;
     }
   } catch (err) {

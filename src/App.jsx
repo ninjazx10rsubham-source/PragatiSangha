@@ -147,15 +147,21 @@ export default function App() {
         (async () => {
           try {
             if (next.settings) {
-              await supabase.from('settings').upsert({
+              const settingsPayload = {
                 id: 'primary_settings',
                 club_name: next.settings.club_name,
                 event_name: next.settings.event_name,
                 other_income: next.settings.other_income,
                 membership_types: next.settings.membership_types,
                 market_categories: next.settings.market_categories,
-                expense_categories: next.settings.expense_categories
-              });
+                expense_categories: next.settings.expense_categories,
+                puja_schedule: next.settings.puja_schedule || []
+              };
+              const { error: setErr } = await supabase.from('settings').upsert(settingsPayload);
+              if (setErr && (setErr.code === '42703' || setErr.message?.includes('puja_schedule'))) {
+                const { puja_schedule, ...rest } = settingsPayload;
+                await supabase.from('settings').upsert(rest);
+              }
             }
 
             // Sync member deletion if any member was removed
@@ -427,6 +433,8 @@ export default function App() {
             {activeTab === 'public' && (
               <PublicPortalPage
                 db={db}
+                onUpdateDB={updateDB}
+                showToast={showToast}
                 onOpenReceipt={handleOpenReceipt}
               />
             )}
