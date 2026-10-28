@@ -1,5 +1,6 @@
 import React from 'react';
 import { Menu, Cloud, Globe, Sparkles, RefreshCw } from 'lucide-react';
+import { MAA_SHYAMA_IMG } from '../assets/maaShyamaImage';
 
 export default function Header({ 
   onMenuToggle, 
@@ -38,7 +39,7 @@ export default function Header({
             {/* Maa Shyama Uploaded Photo Thumbnail with Sacred Ring */}
             <div className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-full overflow-hidden border-2 border-amber-400 shadow-md group-hover:scale-105 group-hover:shadow-[0_0_15px_rgba(251,191,36,0.6)] transition shrink-0">
               <img
-                src="/maa_shyama.jpg"
+                src={MAA_SHYAMA_IMG}
                 alt="মা শ্যামা"
                 className="w-full h-full object-cover"
               />

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Lock, Eye, EyeOff, ShieldCheck, Globe, Database, ArrowRight } from 'lucide-react';
+import { MAA_SHYAMA_IMG } from '../assets/maaShyamaImage';
 
 export default function LoginScreen({ onLogin, onOpenPublic, clubName, eventName, storedPin }) {
   const [password, setPassword] = useState('');
@@ -33,7 +34,7 @@ export default function LoginScreen({ onLogin, onOpenPublic, clubName, eventName
           {/* Header */}
           <div className="text-center space-y-2">
             <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-amber-400 shadow-xl mx-auto">
-              <img src="/maa_shyama.jpg" alt="মা শ্যামা" className="w-full h-full object-cover" />
+              <img src={MAA_SHYAMA_IMG} alt="মা শ্যামা" className="w-full h-full object-cover" />
             </div>
             <div className="text-xs font-extrabold text-amber-800 tracking-wider">
               🌸 ॥ শ্রী শ্রী শ্যামা পূজায় নমঃ ॥ 🌸

@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Printer, X, Calendar, Clock, Flame } from 'lucide-react';
 import { toBnDigits } from '../utils/formatters';
+import { MAA_SHYAMA_IMG } from '../assets/maaShyamaImage';
 
 export default function SchedulePrintModal({ 
   schedule = [], 
@@ -67,7 +68,7 @@ export default function SchedulePrintModal({
               <div className="flex items-center justify-center gap-4 mb-2">
                 <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-amber-400 shadow-sm shrink-0">
                   <img
-                    src="/maa_shyama.jpg"
+                    src={MAA_SHYAMA_IMG}
                     alt="মা শ্যামা"
                     className="w-full h-full object-cover"
                   />

@@ -14,6 +14,7 @@ import {
   Printer
 } from 'lucide-react';
 import { formatTaka, toBnDigits } from '../utils/formatters';
+import { MAA_SHYAMA_IMG } from '../assets/maaShyamaImage';
 
 export default function DashboardPage({ db, onNavigate, onOpenReceipt }) {
   // Calculations
@@ -49,7 +50,7 @@ export default function DashboardPage({ db, onNavigate, onOpenReceipt }) {
         
         <div className="flex items-center gap-4 relative z-10">
           <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-amber-300 shadow-[0_0_20px_rgba(251,191,36,0.5)] shrink-0">
-            <img src="/maa_shyama.jpg" alt="মা শ্যামা" className="w-full h-full object-cover" />
+            <img src={MAA_SHYAMA_IMG} alt="মা শ্যামা" className="w-full h-full object-cover" />
           </div>
           <div>
             <span className="inline-block px-3 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-xs font-bold mb-1 border border-amber-300/30">

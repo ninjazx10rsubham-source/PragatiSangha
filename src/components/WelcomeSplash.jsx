@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, ArrowRight, X } from 'lucide-react';
+import { MAA_SHYAMA_IMG } from '../assets/maaShyamaImage';
 
 export default function WelcomeSplash({ onComplete, clubName = 'প্রগতি সংঘ', eventName = 'শ্রী শ্রী শ্যামা পূজা ২০২৬' }) {
   const [isVisible, setIsVisible] = useState(true);
@@ -69,7 +70,7 @@ export default function WelcomeSplash({ onComplete, clubName = 'প্রগত�
           {/* Maa Shyama Photo */}
           <div className="relative w-36 h-36 sm:w-44 sm:h-44 rounded-full overflow-hidden border-4 border-amber-300 shadow-[0_0_40px_rgba(251,191,36,0.6)]">
             <img
-              src="/maa_shyama.jpg"
+              src={MAA_SHYAMA_IMG}
               alt="মা শ্যামা"
               className="w-full h-full object-cover transform hover:scale-105 transition duration-700"
             />

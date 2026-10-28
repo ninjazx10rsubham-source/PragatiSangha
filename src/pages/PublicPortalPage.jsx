@@ -22,6 +22,7 @@ import {
 import Modal from '../components/Modal';
 import SchedulePrintModal from '../components/SchedulePrintModal';
 import { formatTaka, toBnDigits } from '../utils/formatters';
+import { MAA_SHYAMA_IMG } from '../assets/maaShyamaImage';
 
 export default function PublicPortalPage({ db, onUpdateDB, showToast, onOpenReceipt }) {
   const [search, setSearch] = useState('');
@@ -178,7 +179,7 @@ export default function PublicPortalPage({ db, onUpdateDB, showToast, onOpenRece
           <div className="absolute -inset-2 rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-amber-200 opacity-70 blur-md animate-pulse"></div>
           <div className="relative w-28 h-28 sm:w-36 sm:h-36 rounded-full overflow-hidden border-4 border-amber-300 shadow-[0_0_30px_rgba(251,191,36,0.6)] mx-auto">
             <img
-              src="/maa_shyama.jpg"
+              src={MAA_SHYAMA_IMG}
               alt="মা শ্যামা"
               className="w-full h-full object-cover"
             />
