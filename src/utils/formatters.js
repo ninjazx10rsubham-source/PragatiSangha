@@ -1,25 +1,33 @@
 export const BN_DIGITS = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
 
-export function toBnDigits(num) {
+// Convert digits to Bengali only when forceBn is true (used in Public Portal View)
+export function toBnDigits(num, forceBn = false) {
   if (num === null || num === undefined) return '';
+  if (!forceBn) return String(num); // Keep clean English numbers everywhere across admin/dashboard/tables
   return String(num).replace(/[0-9]/g, (d) => BN_DIGITS[parseInt(d, 10)]);
 }
 
-export function formatTaka(amount) {
+export function formatTaka(amount, forceBn = false) {
   const n = Number(amount) || 0;
   const formatted = new Intl.NumberFormat('en-IN').format(Math.round(n));
-  return '₹' + toBnDigits(formatted);
+  if (forceBn) {
+    return '₹' + String(formatted).replace(/[0-9]/g, (d) => BN_DIGITS[parseInt(d, 10)]);
+  }
+  return '₹' + formatted; // English numbers format, e.g. ₹201, ₹1,200
 }
 
-export function formatBnDate(dateStr) {
+export function formatBnDate(dateStr, forceBn = false) {
   if (!dateStr) return '';
   try {
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return dateStr;
-    const day = toBnDigits(d.getDate().toString().padStart(2, '0'));
+    const day = d.getDate().toString().padStart(2, '0');
     const months = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
     const month = months[d.getMonth()];
-    const year = toBnDigits(d.getFullYear());
+    const year = d.getFullYear();
+    if (forceBn) {
+      return `${toBnDigits(day, true)} ${month}, ${toBnDigits(year, true)}`;
+    }
     return `${day} ${month}, ${year}`;
   } catch {
     return dateStr;

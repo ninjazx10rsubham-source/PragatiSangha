@@ -382,8 +382,8 @@ export default function PublicPortalPage({ db, onUpdateDB, showToast, onOpenRece
                         বাড়ি: <span className="font-semibold text-stone-800">{m.address || '-'}</span> | ধরন: {m.member_type}
                       </div>
                       <div className="flex items-center gap-3 mt-1 text-xs">
-                        <span className="font-medium text-stone-700">জমা: <b className="text-emerald-700">{formatTaka(m.collected_amount)}</b></span>
-                        <span className="font-medium text-stone-700">বাকি: <b className="text-rose-700">{formatTaka(Math.max(0, m.target_amount - m.collected_amount))}</b></span>
+                        <span className="font-medium text-stone-700">জমা: <b className="text-emerald-700">{formatTaka(m.collected_amount, true)}</b></span>
+                        <span className="font-medium text-stone-700">বাকি: <b className="text-rose-700">{formatTaka(Math.max(0, m.target_amount - m.collected_amount), true)}</b></span>
                       </div>
                     </div>
 
