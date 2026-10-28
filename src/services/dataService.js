@@ -112,9 +112,6 @@ export function loadLocalDB() {
       if (!Array.isArray(parsed.previousYearMembers) || parsed.previousYearMembers.length === 0) {
         parsed.previousYearMembers = defaultPreviousYearMembers;
       }
-      if (!Array.isArray(parsed.members) || parsed.members.length === 0) {
-        parsed.members = initialDatabase.members;
-      }
       if (!Array.isArray(parsed.settings) && !parsed.settings) parsed.settings = { ...initialDatabase.settings };
       if (!parsed.settings) parsed.settings = { ...initialDatabase.settings };
       // If puja_schedule is missing or empty array, inject default schedule
