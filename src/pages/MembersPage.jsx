@@ -933,10 +933,11 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                     <tr>
                       <th className="py-3 px-4">ক্রমিক</th>
                       <th className="py-3 px-4">নাম ও পরিচয়</th>
-                      <th className="py-3 px-4">সদস্যপদের ধরন</th>
-                      <th className="py-3 px-4">বিগত বছরের চাঁদা</th>
+                      <th className="py-3 px-4">বিল নং</th>
+                      <th className="py-3 px-4">নির্ধারিত চাঁদা</th>
+                      <th className="py-3 px-4">জমা দেওয়া পরিমাণ (Paid)</th>
                       <th className="py-3 px-4">চলতি বছরে স্ট্যাটাস</th>
-                      <th className="py-3 px-4">মন্তব্য</th>
+                      <th className="py-3 px-4">তারিখ ও মন্তব্য</th>
                       <th className="py-3 px-4 text-right">অ্যাকশন</th>
                     </tr>
                   </thead>
@@ -965,13 +966,20 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                               )}
                             </div>
                           </td>
-                          <td className="py-3 px-4">
-                            <span className="px-2 py-0.5 rounded-full bg-stone-100 text-stone-700 text-xs font-semibold">
-                              {p.member_type || 'সক্রিয় সদস্য'}
-                            </span>
+                          <td className="py-3 px-4 font-mono font-bold text-stone-600 text-xs">
+                            {p.bill_no ? `#${p.bill_no}` : '—'}
                           </td>
-                          <td className="py-3 px-4 font-bold text-stone-800 text-sm">
-                            {formatTaka(p.previous_year_amount || 0)}
+                          <td className="py-3 px-4 font-semibold text-stone-700 text-sm">
+                            {p.nirdharito_amount ? formatTaka(p.nirdharito_amount) : '—'}
+                          </td>
+                          <td className="py-3 px-4 font-extrabold text-emerald-800 text-sm">
+                            {p.paid_amount > 0 ? (
+                              <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                {formatTaka(p.paid_amount)}
+                              </span>
+                            ) : (
+                              <span className="text-stone-400">—</span>
+                            )}
                           </td>
                           <td className="py-3 px-4">
                             {isImported ? (

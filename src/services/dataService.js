@@ -1,4 +1,5 @@
 import { getSupabaseClient } from './supabase';
+import previousYearData from '../data/previousYearData.json';
 
 const LOCAL_STORAGE_KEY = 'pragati_sangha_db_v4';
 const LEGACY_STORAGE_KEY = 'ppkp_database_v1';
@@ -20,11 +21,11 @@ export const defaultExpenseCategories = [
   'প্রতিমা', 'প্যান্ডেল', 'পুজো', 'ভোগ', 'সাজসজ্জা', 'আলো', 'সাউন্ড ও মাইক', 'আপ্যায়ন', 'অন্যান্য'
 ];
 
-export const defaultPreviousYearMembers = [];
+export const defaultPreviousYearMembers = previousYearData.previousYearMembers || [];
 
 export const initialDatabase = {
-  previousYearMembers: [],
-  members: [],
+  previousYearMembers: defaultPreviousYearMembers,
+  members: previousYearData.currentMembers || [],
   payments: [],
   marketEntries: [],
   expenses: [],
@@ -108,7 +109,12 @@ export function loadLocalDB() {
       if (!Array.isArray(parsed.expenses)) parsed.expenses = [];
       if (!Array.isArray(parsed.bhogCoupons)) parsed.bhogCoupons = [];
       if (!Array.isArray(parsed.sponsors)) parsed.sponsors = [];
-      if (!Array.isArray(parsed.previousYearMembers)) parsed.previousYearMembers = [];
+      if (!Array.isArray(parsed.previousYearMembers) || parsed.previousYearMembers.length === 0) {
+        parsed.previousYearMembers = defaultPreviousYearMembers;
+      }
+      if (!Array.isArray(parsed.members) || parsed.members.length === 0) {
+        parsed.members = initialDatabase.members;
+      }
       if (!Array.isArray(parsed.settings) && !parsed.settings) parsed.settings = { ...initialDatabase.settings };
       if (!parsed.settings) parsed.settings = { ...initialDatabase.settings };
       // If puja_schedule is missing or empty array, inject default schedule
