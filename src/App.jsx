@@ -12,7 +12,6 @@ import MembersPage from './pages/MembersPage';
 import PaymentsPage from './pages/PaymentsPage';
 import MarketPage from './pages/MarketPage';
 import ExpensesPage from './pages/ExpensesPage';
-import BhogPage from './pages/BhogPage';
 import SponsorsPage from './pages/SponsorsPage';
 import CalculatorPage from './pages/CalculatorPage';
 import SummaryPage from './pages/SummaryPage';
@@ -30,7 +29,7 @@ export default function App() {
   // Browser History & Routing integration: read initial tab from URL hash
   const getInitialTab = () => {
     const hash = window.location.hash.replace(/^#\/?/, '').trim();
-    const validTabs = ['dashboard', 'members', 'payments', 'market', 'expenses', 'bhog', 'sponsors', 'calculator', 'summary', 'reports', 'settings', 'public'];
+    const validTabs = ['dashboard', 'members', 'payments', 'market', 'expenses', 'sponsors', 'calculator', 'summary', 'reports', 'settings', 'public'];
     return validTabs.includes(hash) ? hash : 'dashboard';
   };
 
@@ -383,14 +382,6 @@ export default function App() {
 
             {activeTab === 'expenses' && (
               <ExpensesPage
-                db={db}
-                onUpdateDB={updateDB}
-                showToast={showToast}
-              />
-            )}
-
-            {activeTab === 'bhog' && (
-              <BhogPage
                 db={db}
                 onUpdateDB={updateDB}
                 showToast={showToast}

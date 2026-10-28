@@ -35,11 +35,6 @@ export default function DashboardPage({ db, onNavigate, onOpenReceipt }) {
   const partialMembersCount = (db.members || []).filter(m => m.status === 'আংশিক জমা').length;
   const pendingMembersCount = (db.members || []).filter(m => m.status === 'বাকি').length;
 
-  const totalBhogCoupons = (db.bhogCoupons || []).reduce((sum, b) => sum + (Number(b.coupon_count) || 0), 0);
-  const deliveredBhogCount = (db.bhogCoupons || [])
-    .filter(b => b.status === 'দেওয়া হয়েছে')
-    .reduce((sum, b) => sum + (Number(b.coupon_count) || 0), 0);
-
   const recentPayments = (db.payments || []).slice(0, 5);
 
   return (
@@ -151,8 +146,8 @@ export default function DashboardPage({ db, onNavigate, onOpenReceipt }) {
         </div>
       </div>
 
-      {/* Secondary Status Rows: Members Progress & Bhog Tokens */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* Secondary Status Row: Members Progress */}
+      <div>
         {/* Members Status Breakdown */}
         <div className="p-5 rounded-2xl bg-[#FFFDF7] border border-[#EADBB6] shadow-sm">
           <div className="flex items-center justify-between mb-4">
@@ -191,38 +186,6 @@ export default function DashboardPage({ db, onNavigate, onOpenReceipt }) {
                 <span>বাকি আছে</span>
               </div>
               <span className="text-xl font-extrabold text-rose-800">{toBnDigits(pendingMembersCount)} জন</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Bhog Distribution Overview */}
-        <div className="p-5 rounded-2xl bg-[#FFFDF7] border border-[#EADBB6] shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-[#4A0E17] flex items-center gap-2">
-              <UtensilsCrossed size={18} className="text-amber-800" />
-              <span>ভোগ বিতরণ পরিস্থিতি</span>
-            </h3>
-            <button
-              onClick={() => onNavigate('bhog')}
-              className="text-xs font-bold text-[#800020] hover:underline"
-            >
-              ভোগ তালিকা দেখুন →
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between gap-4 p-4 bg-amber-50 rounded-xl border border-amber-200">
-            <div>
-              <p className="text-xs text-stone-600 font-medium">মোট নথিভুক্ত ভোগ কুপন</p>
-              <p className="text-2xl font-extrabold text-[#4A0E17] mt-0.5">{toBnDigits(totalBhogCoupons)} টি</p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-stone-600 font-medium">বিতরণ সম্পন্ন হয়েছে</p>
-              <p className="text-2xl font-extrabold text-emerald-700 mt-0.5">
-                {toBnDigits(deliveredBhogCount)} টি 
-                <span className="text-xs font-semibold text-stone-500 ml-1">
-                  ({toBnDigits(totalBhogCoupons > 0 ? Math.round((deliveredBhogCount / totalBhogCoupons) * 100) : 0)}%)
-                </span>
-              </p>
             </div>
           </div>
         </div>

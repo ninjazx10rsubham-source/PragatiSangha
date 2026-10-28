@@ -22,7 +22,6 @@ export const NAV_ITEMS = [
   { id: 'payments', label: 'রসিদ ও লেনদেন', icon: Receipt },
   { id: 'market', label: 'বাজারের ফর্দ', icon: ShoppingBag },
   { id: 'expenses', label: 'বিবিধ পূজা খরচ', icon: ReceiptText },
-  { id: 'bhog', label: 'ভোগ কুপন ট্র্যাকার', icon: UtensilsCrossed },
   { id: 'sponsors', label: 'ব্যানার ও বিজ্ঞাপন', icon: Megaphone },
   { id: 'calculator', label: 'বাজেট ক্যালকুলেটর', icon: Calculator },
   { id: 'summary', label: 'আয়-ব্যয় হিসাব', icon: FileSpreadsheet },
