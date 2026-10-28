@@ -37,7 +37,7 @@ import { exportMembersToExcel, exportPreviousYearMembersToExcel, getWhatsAppDueR
 import { deleteMemberFromSupabase, deletePreviousYearMemberFromSupabase, defaultPreviousYearMembers } from '../services/dataService';
 
 export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }) {
-  const [activeMainTab, setActiveMainTab] = useState('current'); // 'current' | 'archive'
+  const [activeMainTab, setActiveMainTab] = useState('archive'); // Default directly to 'archive' so user immediately sees previous year ledger
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('সবাই');
   const [diffFilter, setDiffFilter] = useState('সব'); // 'সব', 'বৃদ্ধি', 'হ্রাস', 'একই', 'নতুন'

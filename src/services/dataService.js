@@ -218,7 +218,11 @@ export async function fetchSupabaseData() {
       } catch { return null; }
     })();
 
-    const finalPrev = prevYearData || (Array.isArray(localForMerge?.previousYearMembers) ? localForMerge.previousYearMembers : defaultPreviousYearMembers);
+    const finalPrev = prevYearData || (
+      Array.isArray(localForMerge?.previousYearMembers) && localForMerge.previousYearMembers.length > 0
+        ? localForMerge.previousYearMembers
+        : defaultPreviousYearMembers
+    );
     // Merge: Supabase settings + local puja_schedule (in case column missing in cloud)
     const cloudSettings = settingsRes.data || {};
     const mergedSettings = {
