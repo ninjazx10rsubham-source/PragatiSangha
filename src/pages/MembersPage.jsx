@@ -35,6 +35,7 @@ import Modal from '../components/Modal';
 import { formatTaka, toBnDigits } from '../utils/formatters';
 import { exportMembersToExcel, exportPreviousYearMembersToExcel, getWhatsAppDueReminderUrl } from '../services/exportService';
 import { deleteMemberFromSupabase, deletePreviousYearMemberFromSupabase, defaultPreviousYearMembers } from '../services/dataService';
+import { getMemberBillNo, encodeMemberBillNo } from '../utils/billHelper';
 
 export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }) {
   const [activeMainTab, setActiveMainTab] = useState('current'); // Show current members where all 205 members are listed!
@@ -55,6 +56,7 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
 
   const [memberForm, setMemberForm] = useState({
     name: '',
+    bill_no: '',
     phone: '',
     address: '',
     member_type: 'সক্রিয় সদস্য',
@@ -166,6 +168,7 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
     setAutoFilledNotice(prefillData ? { ...prefillData } : null);
     setMemberForm({
       name: prefillData?.name || '',
+      bill_no: prefillData ? getMemberBillNo(prefillData) : '',
       phone: prefillData?.phone || '',
       address: prefillData?.address || '',
       member_type: prefillData?.member_type || membershipTypes[0]?.name || 'সক্রিয় সদস্য',
@@ -181,6 +184,7 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
     setMemberForm({
       ...memberForm,
       name: p.name,
+      bill_no: getMemberBillNo(p) || memberForm.bill_no,
       phone: p.phone || memberForm.phone,
       address: p.address || memberForm.address,
       member_type: p.member_type || memberForm.member_type,
@@ -197,6 +201,7 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
     setAutoFilledNotice(null);
     setMemberForm({
       name: member.name,
+      bill_no: getMemberBillNo(member),
       phone: member.phone || '',
       address: member.address || '',
       member_type: member.member_type,
@@ -216,8 +221,10 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
 
     const prevAmt = Number(memberForm.previous_year_amount) || 0;
     const targetAmt = Number(memberForm.target_amount) || 0;
+    const bill = (memberForm.bill_no || '').trim();
 
     if (modalState.type === 'add') {
+      const fullNotes = encodeMemberBillNo(memberForm.notes.trim(), bill);
       const newMember = {
         id: 'mem_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
         sl_no: members.length + 1,
@@ -230,7 +237,7 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
         collected_amount: 0,
         status: 'বাকি',
         last_payment_date: null,
-        notes: memberForm.notes.trim()
+        notes: fullNotes
       };
       onUpdateDB((prev) => ({
         ...prev,
@@ -240,21 +247,23 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
     } else if (modalState.type === 'edit') {
       onUpdateDB((prev) => ({
         ...prev,
-        members: (prev.members || []).map((m) =>
-          m.id === modalState.member.id
-            ? {
-                ...m,
-                name: memberForm.name.trim(),
-                phone: memberForm.phone.trim(),
-                address: memberForm.address.trim(),
-                member_type: memberForm.member_type,
-                previous_year_amount: prevAmt,
-                target_amount: targetAmt,
-                notes: memberForm.notes.trim(),
-                status: deriveStatus(targetAmt, m.collected_amount)
-              }
-            : m
-        )
+        members: (prev.members || []).map((m) => {
+          if (m.id === modalState.member.id) {
+            const fullNotes = encodeMemberBillNo(memberForm.notes.trim(), bill);
+            return {
+              ...m,
+              name: memberForm.name.trim(),
+              phone: memberForm.phone.trim(),
+              address: memberForm.address.trim(),
+              member_type: memberForm.member_type,
+              previous_year_amount: prevAmt,
+              target_amount: targetAmt,
+              notes: fullNotes,
+              status: deriveStatus(targetAmt, m.collected_amount)
+            };
+          }
+          return m;
+        })
       }));
       showToast('সদস্যের তথ্য সফলভাবে হালনাগাদ হয়েছে!');
     }
@@ -652,6 +661,7 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                   <thead className="bg-[#F7EED3]/70 text-[#4A0E17] font-bold border-b border-[#EADBB6]">
                     <tr>
                       <th className="py-3 px-4">ক্রমিক</th>
+                      <th className="py-3 px-4">বিল নং</th>
                       <th className="py-3 px-4">নাম ও ঠিকানা</th>
                       <th className="py-3 px-4">সদস্যপদের ধরন</th>
                       <th className="py-3 px-4">আগের বছর বনাম বর্তমান</th>
@@ -670,10 +680,20 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                       const due = Math.max(0, target - collected);
                       const diff = target - prev;
                       const reminderUrl = getWhatsAppDueReminderUrl(m);
+                      const billNo = getMemberBillNo(m);
 
                       return (
                         <tr key={m.id} className="hover:bg-[#FDF8EA]/60 transition">
                           <td className="py-3 px-4 font-mono text-stone-500">{toBnDigits(m.sl_no || idx + 1)}</td>
+                          <td className="py-3 px-4">
+                            {billNo ? (
+                              <span className="font-mono font-bold px-2 py-0.5 rounded-md bg-stone-100 text-stone-700 border border-stone-200 text-xs">
+                                #{billNo}
+                              </span>
+                            ) : (
+                              <span className="text-stone-300 text-xs">—</span>
+                            )}
+                          </td>
                           <td className="py-3 px-4">
                             <div className="font-bold text-stone-900 text-sm sm:text-base">{m.name}</div>
                             <div className="flex items-center gap-3 text-xs text-stone-500 mt-0.5">
@@ -863,7 +883,18 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-stone-700 font-bold mb-1">বিল নং (Bill No)</label>
+                <input
+                  type="text"
+                  value={memberForm.bill_no}
+                  onChange={(e) => setMemberForm({ ...memberForm, bill_no: e.target.value })}
+                  placeholder="যেমন: 601 বা 12"
+                  className="w-full px-3.5 py-2.5 rounded-xl border-2 border-amber-300 bg-amber-50/30 font-mono font-bold text-stone-900 focus:outline-none focus:ring-2 focus:ring-[#800020]"
+                />
+              </div>
+
               <div>
                 <label className="block text-stone-700 font-bold mb-1">বাড়ি / ফ্ল্যাট নং</label>
                 <input
