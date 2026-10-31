@@ -163,6 +163,21 @@ export default function App() {
               }
             }
 
+            // Sync payment deletion if any payment was removed
+            if (prev.payments && next.payments) {
+              const removedPaymentIds = prev.payments
+                .filter(pm => !next.payments.some(nm => nm.id === pm.id))
+                .map(m => m.id);
+              if (removedPaymentIds.length) {
+                console.log('Syncing payment deletion to Supabase:', removedPaymentIds);
+                try {
+                  await supabase.from('payments').delete().in('id', removedPaymentIds);
+                } catch (e) {
+                  console.error('Failed to sync payment deletion:', e);
+                }
+              }
+            }
+
             // Sync member deletion if any member was removed
             if (prev.members && next.members) {
               const removedMemberIds = prev.members
@@ -368,6 +383,8 @@ export default function App() {
             {activeTab === 'payments' && (
               <PaymentsPage
                 db={db}
+                onUpdateDB={updateDB}
+                showToast={showToast}
                 onOpenReceipt={handleOpenReceipt}
               />
             )}

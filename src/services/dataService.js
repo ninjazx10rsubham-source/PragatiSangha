@@ -285,6 +285,22 @@ export async function safeUpsertMembers(supabase, members) {
   }
 }
 
+// Safely delete a payment receipt from Supabase cloud database
+export async function deletePaymentFromSupabase(paymentId) {
+  const supabase = getSupabaseClient();
+  if (!supabase || !paymentId) return;
+  try {
+    const { error } = await supabase.from('payments').delete().eq('id', paymentId);
+    if (error) {
+      console.error('Failed to delete payment from Supabase:', error);
+    } else {
+      console.log('Payment successfully deleted from Supabase:', paymentId);
+    }
+  } catch (err) {
+    console.error('Error during Supabase payment delete:', err);
+  }
+}
+
 // Safely delete a member from Supabase cloud database
 export async function deleteMemberFromSupabase(memberId) {
   const supabase = getSupabaseClient();
