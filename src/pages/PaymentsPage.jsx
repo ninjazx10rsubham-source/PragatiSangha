@@ -9,18 +9,32 @@ import {
   Calendar,
   CreditCard,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Edit3,
+  Save,
+  CheckCircle2
 } from 'lucide-react';
 import Modal from '../components/Modal';
 import { formatTaka, toBnDigits, formatBnDate } from '../utils/formatters';
 import { exportToExcel, getWhatsAppReceiptUrl } from '../services/exportService';
-import { deletePaymentFromSupabase } from '../services/dataService';
+import { reconcileMemberBalances } from '../services/dataService';
 
 export default function PaymentsPage({ db, onUpdateDB, showToast, onOpenReceipt }) {
   const [search, setSearch] = useState('');
   const [modeFilter, setModeFilter] = useState('সব');
+  
+  // Modal states
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const [editTarget, setEditTarget] = useState(null);
+  const [editForm, setEditForm] = useState({
+    amount: '',
+    payment_date: '',
+    payment_mode: 'নগদ',
+    collected_by: '',
+    notes: ''
+  });
 
   const payments = db.payments || [];
   const members = db.members || [];
@@ -54,56 +68,19 @@ export default function PaymentsPage({ db, onUpdateDB, showToast, onOpenReceipt 
     exportToExcel(data, 'প্রগতি_সংঘ_চাঁদার_রসিদ_ও_লেনদেন_হিসাব', 'লেনদেন হিস্ট্রি');
   };
 
-  const handleConfirmDelete = async () => {
+  // --- Delete Handler ---
+  const handleConfirmDelete = () => {
     if (!deleteTarget) return;
     setIsDeleting(true);
 
-    try {
-      if (deleteTarget.id) {
-        await deletePaymentFromSupabase(deleteTarget.id);
-      }
-    } catch (err) {
-      console.error('Error deleting payment from Supabase:', err);
-    }
-
-    const paymentAmt = Number(deleteTarget.amount) || 0;
     const paymentId = deleteTarget.id;
-    const memberId = deleteTarget.member_id;
-    const memberName = deleteTarget.member_name;
+    const receiptNo = deleteTarget.receipt_no;
 
     if (onUpdateDB) {
       onUpdateDB((prev) => {
         const remainingPayments = (prev.payments || []).filter((p) => p.id !== paymentId);
-
-        const updatedMembers = (prev.members || []).map((m) => {
-          const isMatch = (memberId && m.id === memberId) || (!memberId && m.name === memberName) || (m.name === memberName);
-          if (!isMatch) return m;
-
-          const currentCollected = Number(m.collected_amount) || 0;
-          const newCollected = Math.max(0, currentCollected - paymentAmt);
-          const target = Number(m.target_amount) || 0;
-
-          let newStatus = 'বাকি';
-          if (newCollected <= 0) {
-            newStatus = 'বাকি';
-          } else if (target > 0 && newCollected >= target) {
-            newStatus = 'জমা হয়েছে';
-          } else {
-            newStatus = 'আংশিক জমা';
-          }
-
-          // Find other remaining payments for this member to determine last_payment_date
-          const memberOtherPayments = remainingPayments
-            .filter((p) => (p.member_id && p.member_id === m.id) || p.member_name === m.name)
-            .sort((a, b) => new Date(b.payment_date) - new Date(a.payment_date));
-
-          return {
-            ...m,
-            collected_amount: newCollected,
-            status: newStatus,
-            last_payment_date: memberOtherPayments[0]?.payment_date || null
-          };
-        });
+        // Automatically recalculate every member balance and status based on remaining payments
+        const updatedMembers = reconcileMemberBalances(prev.members || [], remainingPayments);
 
         return {
           ...prev,
@@ -114,11 +91,66 @@ export default function PaymentsPage({ db, onUpdateDB, showToast, onOpenReceipt 
     }
 
     if (showToast) {
-      showToast(`রসিদ নং ${deleteTarget.receipt_no} সফলভাবে মুছে ফেলা হয়েছে!`, 'success');
+      showToast(`রসিদ নং ${receiptNo} সফলভাবে মুছে ফেলা হয়েছে!`, 'success');
     }
 
     setIsDeleting(false);
     setDeleteTarget(null);
+  };
+
+  // --- Edit Handler ---
+  const handleOpenEdit = (payment) => {
+    setEditTarget(payment);
+    setEditForm({
+      amount: payment.amount || '',
+      payment_date: payment.payment_date || new Date().toISOString().split('T')[0],
+      payment_mode: payment.payment_mode || 'নগদ',
+      collected_by: payment.collected_by || 'কোষাধ্যক্ষ',
+      notes: payment.notes || ''
+    });
+  };
+
+  const handleSaveEdit = (e) => {
+    e.preventDefault();
+    if (!editTarget) return;
+
+    const newAmt = Number(editForm.amount) || 0;
+    if (newAmt <= 0) {
+      if (showToast) showToast('অনুগ্রহ করে সঠিক টাকার পরিমাণ দিন', 'error');
+      return;
+    }
+
+    const updatedPayment = {
+      ...editTarget,
+      amount: newAmt,
+      payment_date: editForm.payment_date,
+      payment_mode: editForm.payment_mode,
+      collected_by: editForm.collected_by.trim(),
+      notes: editForm.notes.trim()
+    };
+
+    if (onUpdateDB) {
+      onUpdateDB((prev) => {
+        const updatedPayments = (prev.payments || []).map((p) =>
+          p.id === editTarget.id ? updatedPayment : p
+        );
+
+        // Automatically recalculate every member balance and status based on updated payments
+        const updatedMembers = reconcileMemberBalances(prev.members || [], updatedPayments);
+
+        return {
+          ...prev,
+          payments: updatedPayments,
+          members: updatedMembers
+        };
+      });
+    }
+
+    if (showToast) {
+      showToast(`রসিদ নং ${editTarget.receipt_no} সফলভাবে আপডেট করা হয়েছে!`, 'success');
+    }
+
+    setEditTarget(null);
   };
 
   return (
@@ -130,7 +162,7 @@ export default function PaymentsPage({ db, onUpdateDB, showToast, onOpenReceipt 
             চাঁদার রসিদ ও ট্রানজাকশন হিস্ট্রি
           </h2>
           <p className="text-xs sm:text-sm text-stone-500">
-            ইস্যুকৃত প্রতিটি চাঁদার ডিজিটাল রসিদ, পুনঃপ্রিন্ট, হোয়াটসঅ্যাপ শেয়ার ও রসিদ ব্যবস্থাপনা
+            ইস্যুকৃত প্রতিটি চাঁদার ডিজিটাল রসিদ, এডিট/সংশোধন, পুনঃপ্রিন্ট ও রসিদ ব্যবস্থাপনা
           </p>
         </div>
 
@@ -168,7 +200,7 @@ export default function PaymentsPage({ db, onUpdateDB, showToast, onOpenReceipt 
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" size={17} />
           <input
             type="text"
-            placeholder="রসিদ নং (যেমন PS-2026-0001) বা নাম দিয়ে খুঁজুন..."
+            placeholder="রসিদ নং বা দাতার নাম দিয়ে খুঁজুন..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-200 bg-white text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#800020]"
@@ -207,7 +239,7 @@ export default function PaymentsPage({ db, onUpdateDB, showToast, onOpenReceipt 
                   <th className="py-3 px-4">তারিখ</th>
                   <th className="py-3 px-4">মাধ্যম</th>
                   <th className="py-3 px-4">আদায়কারী</th>
-                  <th className="py-3 px-4 text-right">রশিদ ও একশন</th>
+                  <th className="py-3 px-4 text-right">একশন ও ব্যবস্থাপনা</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
@@ -254,11 +286,20 @@ export default function PaymentsPage({ db, onUpdateDB, showToast, onOpenReceipt 
 
                           <button
                             onClick={() => onOpenReceipt(p, member)}
-                            className="inline-flex items-center gap-1 px-3 py-1 bg-[#4A0E17] hover:bg-[#6b1421] text-amber-300 rounded-lg text-xs font-bold transition shadow-xs"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#4A0E17] hover:bg-[#6b1421] text-amber-300 rounded-lg text-xs font-bold transition shadow-xs"
                             title="রশিদ প্রিন্ট বা প্রিভিউ করুন"
                           >
                             <Printer size={13} />
-                            <span>রশিদ প্রিন্ট</span>
+                            <span>প্রিন্ট</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleOpenEdit(p)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-bold transition shadow-xs"
+                            title="রশিদ সংশোধন / আপডেট করুন"
+                          >
+                            <Edit3 size={13} />
+                            <span className="hidden sm:inline">এডিট</span>
                           </button>
 
                           <button
@@ -280,6 +321,101 @@ export default function PaymentsPage({ db, onUpdateDB, showToast, onOpenReceipt 
         )}
       </div>
 
+      {/* Edit Receipt Modal */}
+      {editTarget && (
+        <Modal
+          title={`রসিদ সংশোধন (${editTarget.receipt_no})`}
+          onClose={() => setEditTarget(null)}
+        >
+          <form onSubmit={handleSaveEdit} className="space-y-4">
+            <div className="bg-[#F7EED3]/60 p-3.5 rounded-xl border border-[#EADBB6] flex items-center justify-between">
+              <div>
+                <span className="text-xs text-stone-500 block">রসিদ নম্বর</span>
+                <span className="font-mono font-bold text-[#800020] text-sm">{editTarget.receipt_no}</span>
+              </div>
+              <div>
+                <span className="text-xs text-stone-500 block">দাতার নাম</span>
+                <span className="font-bold text-stone-900 text-sm">{editTarget.member_name}</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1">জমা চাঁদার পরিমাণ (₹) *</label>
+              <input
+                type="number"
+                min="1"
+                required
+                value={editForm.amount}
+                onChange={(e) => setEditForm(prev => ({ ...prev, amount: e.target.value }))}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white text-sm focus:ring-2 focus:ring-[#800020]"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1">পেমেন্টের তারিখ *</label>
+                <input
+                  type="date"
+                  required
+                  value={editForm.payment_date}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, payment_date: e.target.value }))}
+                  className="w-full px-3.5 py-2 rounded-xl border border-stone-300 bg-white text-xs sm:text-sm focus:ring-2 focus:ring-[#800020]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1">পেমেন্ট মাধ্যম</label>
+                <select
+                  value={editForm.payment_mode}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, payment_mode: e.target.value }))}
+                  className="w-full px-3.5 py-2 rounded-xl border border-stone-300 bg-white text-xs sm:text-sm focus:ring-2 focus:ring-[#800020]"
+                >
+                  <option value="নগদ">নগদ</option>
+                  <option value="UPI">UPI</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1">আদায়কারী</label>
+              <input
+                type="text"
+                value={editForm.collected_by}
+                onChange={(e) => setEditForm(prev => ({ ...prev, collected_by: e.target.value }))}
+                className="w-full px-3.5 py-2 rounded-xl border border-stone-300 bg-white text-xs sm:text-sm focus:ring-2 focus:ring-[#800020]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1">মন্তব্য (ঐচ্ছিক)</label>
+              <input
+                type="text"
+                value={editForm.notes}
+                onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="কোনো অতিরিক্ত মন্তব্য..."
+                className="w-full px-3.5 py-2 rounded-xl border border-stone-300 bg-white text-xs sm:text-sm focus:ring-2 focus:ring-[#800020]"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setEditTarget(null)}
+                className="px-4 py-2 rounded-xl border border-stone-300 text-stone-700 hover:bg-stone-100 text-xs sm:text-sm font-semibold transition"
+              >
+                বাতিল
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 rounded-xl bg-[#4A0E17] hover:bg-[#6b1421] text-amber-300 text-xs sm:text-sm font-bold transition flex items-center gap-1.5 shadow-sm"
+              >
+                <Save size={15} />
+                <span>পরিবর্তন সংরক্ষণ করুন</span>
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
       {/* Delete Receipt Confirmation Modal */}
       {deleteTarget && (
         <Modal
@@ -291,7 +427,7 @@ export default function PaymentsPage({ db, onUpdateDB, showToast, onOpenReceipt 
               <AlertTriangle className="text-amber-600 shrink-0 mt-0.5" size={18} />
               <div>
                 <span className="font-bold block">সতর্কতা:</span>
-                এই রসিদটি ডিলিট করলে সদস্যের চাঁদা খাতা থেকে <strong>{formatTaka(deleteTarget.amount)}</strong> টাকা স্বয়ংক্রিয়ভাবে বাদ যাবে এবং সদস্যের বাকি/পরিশোধের স্ট্যাটাস পুনরায় হিসাব করা হবে।
+                এই রসিদটি ডিলিট করলে সদস্যের চাঁদা খাতা থেকে <strong>{formatTaka(deleteTarget.amount)}</strong> টাকা স্বয়ংক্রিয়ভাবে বাদ যাবে এবং সদস্যের বাকি/পরিশোধের স্ট্যাটাস ও ড্যাশবোর্ড তৎক্ষণাৎ আপডেট হবে।
               </div>
             </div>
 

@@ -17,10 +17,8 @@ import { formatTaka, toBnDigits } from '../utils/formatters';
 import { MAA_SHYAMA_IMG } from '../assets/maaShyamaImage';
 
 export default function DashboardPage({ db, onNavigate, onOpenReceipt }) {
-  // Calculations (Uses receipts payments total if available for 100% exact match)
-  const paymentsTotal = (db.payments || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-  const membersTotal = (db.members || []).reduce((sum, m) => sum + (Number(m.collected_amount) || 0), 0);
-  const totalChanda = paymentsTotal > 0 ? paymentsTotal : membersTotal;
+  // Calculations (Uses payments receipts total as ground truth)
+  const totalChanda = (db.payments || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
   const targetChanda = (db.members || []).reduce((sum, m) => sum + (Number(m.target_amount) || 0), 0);
   const otherIncome = Number(db.settings?.other_income) || 0;
   
@@ -37,7 +35,9 @@ export default function DashboardPage({ db, onNavigate, onOpenReceipt }) {
   const partialMembersCount = (db.members || []).filter(m => m.status === 'আংশিক জমা').length;
   const pendingMembersCount = (db.members || []).filter(m => m.status === 'বাকি').length;
 
-  const recentPayments = (db.payments || []).slice(0, 5);
+  const recentPayments = [...(db.payments || [])]
+    .sort((a, b) => new Date(b.payment_date || 0) - new Date(a.payment_date || 0))
+    .slice(0, 5);
 
   return (
     <div className="space-y-6">

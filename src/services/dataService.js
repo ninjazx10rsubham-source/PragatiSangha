@@ -95,14 +95,13 @@ export const initialDatabase = {
 
 // Reconciles member collected amounts and status with actual payments records
 export function reconcileMemberBalances(members, payments) {
-  if (!Array.isArray(members) || !Array.isArray(payments) || payments.length === 0) {
-    return members || [];
-  }
+  if (!Array.isArray(members)) return [];
+  const safePayments = Array.isArray(payments) ? payments : [];
 
   const paymentTotals = {};
   const lastPaymentDates = {};
 
-  payments.forEach((p) => {
+  safePayments.forEach((p) => {
     const amt = Number(p.amount) || 0;
     if (p.member_id) {
       paymentTotals[p.member_id] = (paymentTotals[p.member_id] || 0) + amt;
@@ -120,9 +119,10 @@ export function reconcileMemberBalances(members, payments) {
 
   return members.map((m) => {
     const hasPayments = (m.id && paymentTotals[m.id] !== undefined) || (m.name && paymentTotals[m.name] !== undefined);
-    if (!hasPayments) return m;
+    const actualCollected = hasPayments 
+      ? ((m.id && paymentTotals[m.id] !== undefined) ? paymentTotals[m.id] : paymentTotals[m.name])
+      : 0;
 
-    const actualCollected = (m.id && paymentTotals[m.id] !== undefined) ? paymentTotals[m.id] : paymentTotals[m.name];
     const target = Number(m.target_amount) || 0;
     let status = 'বাকি';
     if (actualCollected <= 0) {
@@ -133,7 +133,7 @@ export function reconcileMemberBalances(members, payments) {
       status = 'আংশিক জমা';
     }
 
-    const lastDate = (m.id && lastPaymentDates[m.id]) || (m.name && lastPaymentDates[m.name]) || m.last_payment_date;
+    const lastDate = (m.id && lastPaymentDates[m.id]) || (m.name && lastPaymentDates[m.name]) || null;
 
     return {
       ...m,

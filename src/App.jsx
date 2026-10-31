@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import Toast from './components/Toast';
@@ -33,6 +33,7 @@ export default function App() {
     return validTabs.includes(hash) ? hash : 'dashboard';
   };
 
+  const isSavingRef = useRef(false);
   const [activeTab, setActiveTabState] = useState(getInitialTab);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCloudConnected, setIsCloudConnected] = useState(true); // Permanent Supabase connection
@@ -101,6 +102,10 @@ export default function App() {
         { event: '*', schema: 'public' },
         (payload) => {
           console.log('Realtime DB change received:', payload);
+          if (isSavingRef.current) {
+            console.log('Skipping Realtime reload because local save is in progress');
+            return;
+          }
           checkAndLoadSupabase();
         }
       )
@@ -144,6 +149,7 @@ export default function App() {
       const supabase = getSupabaseClient();
       if (supabase) {
         (async () => {
+          isSavingRef.current = true;
           try {
             if (next.settings) {
               const settingsPayload = {
@@ -272,6 +278,10 @@ export default function App() {
             }
           } catch (err) {
             console.error('Background cloud sync error:', err);
+          } finally {
+            setTimeout(() => {
+              isSavingRef.current = false;
+            }, 1500);
           }
         })();
       }
