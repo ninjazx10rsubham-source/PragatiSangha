@@ -13,7 +13,8 @@ import {
   Settings, 
   X,
   Sparkles,
-  LogOut
+  LogOut,
+  Ticket
 } from 'lucide-react';
 
 export const NAV_ITEMS = [

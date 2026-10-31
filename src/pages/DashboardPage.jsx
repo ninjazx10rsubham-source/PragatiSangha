@@ -11,7 +11,8 @@ import {
   PlusCircle,
   UtensilsCrossed,
   Share2,
-  Printer
+  Printer,
+  Ticket
 } from 'lucide-react';
 import { formatTaka, toBnDigits } from '../utils/formatters';
 import { MAA_SHYAMA_IMG } from '../assets/maaShyamaImage';
