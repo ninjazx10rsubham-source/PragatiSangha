@@ -312,7 +312,6 @@ export async function fetchSupabaseData() {
 
     return {
       members: reconciledMembers,
-      _rawMembers: rawMembers,
       payments: rawPayments,
       marketEntries: marketRes.data || [],
       expenses: expensesRes.data || [],

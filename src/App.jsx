@@ -79,33 +79,22 @@ export default function App() {
         setDb(cloudData);
         saveLocalDB(cloudData);
         setIsCloudConnected(true);
-
-        // Auto Self-Heal: if any member balance differs from cloud raw records, quietly sync back
-        if (Array.isArray(cloudData._rawMembers) && cloudData._rawMembers.length > 0) {
-          const diffMembers = cloudData.members.filter(m => {
-            const raw = cloudData._rawMembers.find(rm => rm.id === m.id);
-            return raw && (raw.collected_amount !== m.collected_amount || raw.status !== m.status || raw.last_payment_date !== m.last_payment_date);
-          });
-          if (diffMembers.length > 0) {
-            safeUpsertMembers(supabase, diffMembers);
-          }
-        }
       }
     } catch (err) {
       console.warn('Supabase fetch failed, continuing with local cache:', err);
-      // Keep isCloudConnected true because client credentials are valid
       setIsCloudConnected(true);
     }
   }, []);
 
-  // Initial mount & Supabase Realtime subscription
+  // Initial mount & Supabase Realtime subscription with debounce and race-condition guard
   useEffect(() => {
     checkAndLoadSupabase();
 
     const supabase = getSupabaseClient();
     if (!supabase) return;
 
-    // Realtime channel listener for multi-device sync
+    let debounceTimer = null;
+
     const channel = supabase
       .channel('schema-db-changes')
       .on(
@@ -117,12 +106,18 @@ export default function App() {
             console.log('Skipping Realtime reload because local save is in progress');
             return;
           }
-          checkAndLoadSupabase();
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            if (!isSavingRef.current) {
+              checkAndLoadSupabase();
+            }
+          }, 800);
         }
       )
       .subscribe();
 
     return () => {
+      clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
   }, [checkAndLoadSupabase]);
@@ -258,23 +253,28 @@ export default function App() {
               }
             }
 
-            if (next.members !== prev.members && next.members?.length) {
-              const changedMembers = next.members.filter(nm => {
-                const pm = (prev.members || []).find(m => m.id === nm.id);
-                return !pm || JSON.stringify(pm) !== JSON.stringify(nm);
-              });
-              if (changedMembers.length > 0) {
-                await safeUpsertMembers(supabase, changedMembers);
-              }
-            }
-
-            if (next.payments !== prev.payments && next.payments?.length) {
+            // Sync Payments First
+            if (next.payments && next.payments.length > 0) {
               const changedPayments = next.payments.filter(np => {
                 const pp = (prev.payments || []).find(p => p.id === np.id);
                 return !pp || JSON.stringify(pp) !== JSON.stringify(np);
               });
               if (changedPayments.length > 0) {
-                await supabase.from('payments').upsert(changedPayments);
+                console.log('Upserting payments to Supabase:', changedPayments);
+                const { error: pErr } = await supabase.from('payments').upsert(changedPayments);
+                if (pErr) console.error('Error upserting payments:', pErr);
+              }
+            }
+
+            // Sync Members Second
+            if (next.members && next.members.length > 0) {
+              const changedMembers = next.members.filter(nm => {
+                const pm = (prev.members || []).find(m => m.id === nm.id);
+                return !pm || JSON.stringify(pm) !== JSON.stringify(nm);
+              });
+              if (changedMembers.length > 0) {
+                console.log('Upserting changed members to Supabase:', changedMembers.length);
+                await safeUpsertMembers(supabase, changedMembers);
               }
             }
 
@@ -304,7 +304,7 @@ export default function App() {
           } finally {
             setTimeout(() => {
               isSavingRef.current = false;
-            }, 1500);
+            }, 2500);
           }
         })();
       }
