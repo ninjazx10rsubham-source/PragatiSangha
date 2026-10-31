@@ -10,6 +10,7 @@ import WelcomeSplash from './components/WelcomeSplash';
 import DashboardPage from './pages/DashboardPage';
 import MembersPage from './pages/MembersPage';
 import PaymentsPage from './pages/PaymentsPage';
+import CouponsPage from './pages/CouponsPage';
 import MarketPage from './pages/MarketPage';
 import ExpensesPage from './pages/ExpensesPage';
 import SponsorsPage from './pages/SponsorsPage';
@@ -20,7 +21,7 @@ import SettingsPage from './pages/SettingsPage';
 import PublicPortalPage from './pages/PublicPortalPage';
 
 // Services
-import { loadLocalDB, saveLocalDB, fetchSupabaseData, safeUpsertMembers, initialDatabase } from './services/dataService';
+import { loadLocalDB, saveLocalDB, fetchSupabaseData, safeUpsertMembers, encodeCouponForSupabase, initialDatabase } from './services/dataService';
 import { getSupabaseClient, getSupabaseCredentials } from './services/supabase';
 
 export default function App() {
@@ -29,7 +30,7 @@ export default function App() {
   // Browser History & Routing integration: read initial tab from URL hash
   const getInitialTab = () => {
     const hash = window.location.hash.replace(/^#\/?/, '').trim();
-    const validTabs = ['dashboard', 'members', 'payments', 'market', 'expenses', 'sponsors', 'calculator', 'summary', 'reports', 'settings', 'public'];
+    const validTabs = ['dashboard', 'members', 'payments', 'coupons', 'market', 'expenses', 'sponsors', 'calculator', 'summary', 'reports', 'settings', 'public'];
     return validTabs.includes(hash) ? hash : 'dashboard';
   };
 
@@ -282,8 +283,17 @@ export default function App() {
               await supabase.from('expenses').upsert(next.expenses);
             }
 
-            if (next.bhogCoupons !== prev.bhogCoupons && next.bhogCoupons?.length) {
-              await supabase.from('bhog_coupons').upsert(next.bhogCoupons);
+            if (next.bhogCoupons && next.bhogCoupons.length > 0) {
+              const changedCoupons = next.bhogCoupons.filter(nc => {
+                const pc = (prev.bhogCoupons || []).find(c => c.id === nc.id);
+                return !pc || JSON.stringify(pc) !== JSON.stringify(nc);
+              });
+              if (changedCoupons.length > 0) {
+                console.log('Upserting changed coupons to Supabase:', changedCoupons.length);
+                const encoded = changedCoupons.map(encodeCouponForSupabase);
+                const { error: cErr } = await supabase.from('bhog_coupons').upsert(encoded);
+                if (cErr) console.error('Error upserting coupons:', cErr);
+              }
             }
 
             if (next.sponsors !== prev.sponsors && next.sponsors?.length) {
@@ -415,6 +425,14 @@ export default function App() {
                 onUpdateDB={updateDB}
                 showToast={showToast}
                 onOpenReceipt={handleOpenReceipt}
+              />
+            )}
+
+            {activeTab === 'coupons' && (
+              <CouponsPage
+                db={db}
+                onUpdateDB={updateDB}
+                showToast={showToast}
               />
             )}
 

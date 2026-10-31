@@ -20,6 +20,7 @@ export const NAV_ITEMS = [
   { id: 'dashboard', label: 'ড্যাশবোর্ড', icon: LayoutDashboard },
   { id: 'members', label: 'সদস্য ও চাঁদা', icon: Users },
   { id: 'payments', label: 'রসিদ ও লেনদেন', icon: Receipt },
+  { id: 'coupons', label: 'কুপন কালেকশন', icon: Ticket },
   { id: 'market', label: 'বাজারের ফর্দ', icon: ShoppingBag },
   { id: 'expenses', label: 'বিবিধ পূজা খরচ', icon: ReceiptText },
   { id: 'sponsors', label: 'ব্যানার ও বিজ্ঞাপন', icon: Megaphone },

@@ -15,9 +15,10 @@ export default function SummaryPage({ db, onUpdateDB, showToast }) {
 
   // Income Breakdown (Uses payments receipts total as ground truth)
   const totalChanda = (db.payments || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+  const totalCoupons = (db.bhogCoupons || []).reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
   const totalSponsors = (db.sponsors || []).reduce((sum, s) => sum + (Number(s.paid_amount) || 0), 0);
   const otherIncome = Number(db.settings?.other_income) || 0;
-  const grandTotalIncome = totalChanda + totalSponsors + otherIncome;
+  const grandTotalIncome = totalChanda + totalCoupons + totalSponsors + otherIncome;
 
   // Expenses Breakdown
   const totalMarket = (db.marketEntries || []).reduce((sum, mk) => sum + (Number(mk.amount) || 0), 0);
@@ -106,6 +107,16 @@ export default function SummaryPage({ db, onUpdateDB, showToast }) {
                 </span>
               </div>
               <span className="text-base font-extrabold text-[#4A0E17]">{formatTaka(totalChanda)}</span>
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50/60 border border-emerald-200">
+              <div>
+                <span className="font-bold text-stone-800 block">কুপন বিক্রি থেকে সংগৃহীত আয়</span>
+                <span className="text-xs text-stone-500">
+                  মোট বিক্রীত কুপন: {toBnDigits((db.bhogCoupons || []).reduce((s, c) => s + (Number(c.coupon_count) || 0), 0))} টি ({toBnDigits((db.bhogCoupons || []).length)} টি কালেকশন)
+                </span>
+              </div>
+              <span className="text-base font-extrabold text-emerald-800">{formatTaka(totalCoupons)}</span>
             </div>
 
             <div className="flex items-center justify-between p-3 rounded-xl bg-purple-50/60 border border-purple-200">

@@ -1,3 +1,83 @@
+// Coupon collection codec and helpers
+export function getNextCouponNo(coupons) {
+  if (!Array.isArray(coupons) || coupons.length === 0) {
+    return 'CPN-001';
+  }
+  let maxNum = 0;
+  coupons.forEach((c) => {
+    if (c && c.coupon_no) {
+      const match = String(c.coupon_no).match(/(\d+)$/);
+      if (match) {
+        const n = parseInt(match[1], 10);
+        if (!isNaN(n) && n > maxNum) {
+          maxNum = n;
+        }
+      }
+    }
+  });
+  return `CPN-${String(maxNum + 1).padStart(3, '0')}`;
+}
+
+export function parseCoupon(raw) {
+  let amount = 0;
+  let rate = 50;
+  let collector = 'কোষাধ্যক্ষ';
+  let cleanNotes = raw.notes || '';
+
+  if (raw.notes) {
+    const match = raw.notes.match(/\[CPN_META:(.*?)\]/);
+    if (match) {
+      try {
+        const meta = JSON.parse(match[1]);
+        amount = Number(meta.amt) || 0;
+        rate = Number(meta.rate) || 50;
+        collector = meta.col || 'কোষাধ্যক্ষ';
+        cleanNotes = raw.notes.replace(/\[CPN_META:.*?\]\s*/, '');
+      } catch (e) {}
+    }
+  }
+
+  if (!amount && raw.coupon_count) {
+    amount = (Number(raw.coupon_count) || 1) * rate;
+  }
+
+  const pdate = raw.delivered_time 
+    ? raw.delivered_time.split('T')[0] 
+    : (raw.created_at ? raw.created_at.split('T')[0] : new Date().toISOString().split('T')[0]);
+
+  return {
+    id: raw.id,
+    coupon_no: raw.house_no || '',
+    donor_name: raw.family_head || '',
+    phone: raw.phone || '',
+    coupon_count: Number(raw.coupon_count) || 1,
+    rate: rate,
+    amount: amount,
+    payment_mode: raw.status || 'নগদ',
+    payment_date: pdate,
+    collected_by: collector,
+    notes: cleanNotes
+  };
+}
+
+export function encodeCouponForSupabase(c) {
+  const meta = JSON.stringify({
+    amt: Number(c.amount) || 0,
+    rate: Number(c.rate) || 50,
+    col: c.collected_by || 'কোষাধ্যক্ষ'
+  });
+  return {
+    id: c.id,
+    house_no: c.coupon_no || '',
+    family_head: c.donor_name || '',
+    phone: c.phone || '',
+    coupon_count: Number(c.coupon_count) || 1,
+    status: c.payment_mode || 'নগদ',
+    delivered_time: c.payment_date ? `${c.payment_date}T00:00:00.000Z` : null,
+    notes: `[CPN_META:${meta}] ${c.notes || ''}`.trim()
+  };
+}
+
 import { getSupabaseClient } from './supabase';
 import previousYearData from '../data/previousYearData.json';
 
@@ -335,7 +415,7 @@ export async function fetchSupabaseData() {
       payments: rawPayments,
       marketEntries: marketRes.data || [],
       expenses: expensesRes.data || [],
-      bhogCoupons: bhogRes.data || [],
+      bhogCoupons: (bhogRes.data || []).map(parseCoupon),
       sponsors: sponsorsRes.data || [],
       settings: mergedSettings,
       previousYearMembers: finalPrev,

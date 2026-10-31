@@ -159,3 +159,32 @@ _প্রগতি সংঘ পূজা কমিটি_`;
 
   return `https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`;
 }
+
+// Export Coupons to Excel
+export function exportCouponsToExcel(coupons) {
+  const data = (coupons || []).map((c, idx) => ({
+    'ক্রমিক': idx + 1,
+    'কুপন / বই নং': c.coupon_no || '-',
+    'ক্রেতা / দাতার নাম': c.donor_name || '-',
+    'মোবাইল নম্বর': c.phone || '-',
+    'কুপন সংখ্যা': Number(c.coupon_count) || 1,
+    'দর (₹)': Number(c.rate) || 50,
+    'মোট আদায় (₹)': Number(c.amount) || 0,
+    'পেমেন্ট তারিখ': c.payment_date || '-',
+    'পেমেন্ট মাধ্যম': c.payment_mode || 'নগদ',
+    'আদায়কারী': c.collected_by || '-',
+    'মন্তব্য': c.notes || '-'
+  }));
+
+  exportToExcel(data, 'প্রগতি_সংঘ_কুপন_কালেকশন_হিসাব', 'কুপন কালেকশন');
+}
+
+// WhatsApp confirmation message for Coupon collection
+export function getWhatsAppCouponUrl(phone, coupon, clubName = 'প্রগতি সংঘ') {
+  if (!phone) return null;
+  const cleanPhone = phone.replace(/[^0-9]/g, '');
+  if (!cleanPhone) return null;
+  const targetPhone = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
+  const msg = `🙏 *${clubName} - শ্রী শ্রী শ্যামা পূজা ২০২৬* 🙏\n\nশ্রদ্ধেয় ${coupon.donor_name || 'ভক্ত'}\nআপনার কুপন চাঁদা সফলভাবে জমা হয়েছে।\n\n🎟️ *কুপন / রসিদ নং:* ${coupon.coupon_no}\n📦 *কুপন সংখ্যা:* ${coupon.coupon_count} টি\n💰 *মোট জমা:* ₹${coupon.amount}\n📅 *তারিখ:* ${coupon.payment_date}\n💳 *মাধ্যম:* ${coupon.payment_mode || 'নগদ'}\n\nআপনার আন্তরিক সহযোগিতার জন্য ধন্যবাদ। মা শ্যামার কৃপায় আপনার ও আপনার পরিবারের মঙ্গল হোক।\n- *${clubName} পূজা কমিটি*`;
+  return `https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`;
+}

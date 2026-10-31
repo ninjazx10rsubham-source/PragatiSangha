@@ -19,11 +19,12 @@ import { MAA_SHYAMA_IMG } from '../assets/maaShyamaImage';
 export default function DashboardPage({ db, onNavigate, onOpenReceipt }) {
   // Calculations (Uses payments receipts total as ground truth)
   const totalChanda = (db.payments || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+  const totalCoupons = (db.bhogCoupons || []).reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
   const targetChanda = (db.members || []).reduce((sum, m) => sum + (Number(m.target_amount) || 0), 0);
   const otherIncome = Number(db.settings?.other_income) || 0;
   
   const sponsorIncome = (db.sponsors || []).reduce((sum, s) => sum + (Number(s.paid_amount) || 0), 0);
-  const totalIncome = totalChanda + otherIncome + sponsorIncome;
+  const totalIncome = totalChanda + totalCoupons + otherIncome + sponsorIncome;
 
   const totalMarket = (db.marketEntries || []).reduce((sum, mk) => sum + (Number(mk.amount) || 0), 0);
   const totalExpenses = (db.expenses || []).reduce((sum, ex) => sum + (Number(ex.amount) || 0), 0);
@@ -76,7 +77,7 @@ export default function DashboardPage({ db, onNavigate, onOpenReceipt }) {
       </div>
 
       {/* Primary KPI Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {/* Net Balance Card */}
         <div className="p-5 rounded-2xl bg-[#FFFDF7] border-2 border-amber-300 shadow-md">
           <div className="flex items-center justify-between">
@@ -110,6 +111,27 @@ export default function DashboardPage({ db, onNavigate, onOpenReceipt }) {
             <span className="text-amber-800 font-bold ml-1">
               ({toBnDigits(targetChanda > 0 ? Math.round((totalChanda / targetChanda) * 100) : 0)}%)
             </span>
+          </div>
+        </div>
+
+        {/* Coupon Collection Card */}
+        <div 
+          onClick={() => onNavigate('coupons')}
+          className="p-5 rounded-2xl bg-[#FFFDF7] border border-[#EADBB6] shadow-sm hover:shadow transition cursor-pointer group"
+          title="কুপন কালেকশন বিস্তারিত দেখুন"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-stone-500 uppercase group-hover:text-[#4A0E17]">কুপন থেকে আদায়</span>
+            <div className="p-2.5 rounded-xl bg-emerald-100 text-emerald-800 group-hover:bg-emerald-200 transition">
+              <Ticket size={20} />
+            </div>
+          </div>
+          <div className="text-2xl sm:text-3xl font-extrabold text-emerald-800 mt-2">
+            {formatTaka(totalCoupons)}
+          </div>
+          <div className="flex items-center justify-between mt-2 text-xs text-stone-600">
+            <span>মোট: {toBnDigits((db.bhogCoupons || []).reduce((s, c) => s + (Number(c.coupon_count) || 0), 0))} টি কুপন</span>
+            <span className="text-[#800020] font-bold group-hover:underline">হিসাব →</span>
           </div>
         </div>
 
