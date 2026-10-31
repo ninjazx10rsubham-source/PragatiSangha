@@ -93,6 +93,57 @@ export const initialDatabase = {
   }
 };
 
+// Reconciles member collected amounts and status with actual payments records
+export function reconcileMemberBalances(members, payments) {
+  if (!Array.isArray(members) || !Array.isArray(payments) || payments.length === 0) {
+    return members || [];
+  }
+
+  const paymentTotals = {};
+  const lastPaymentDates = {};
+
+  payments.forEach((p) => {
+    const amt = Number(p.amount) || 0;
+    if (p.member_id) {
+      paymentTotals[p.member_id] = (paymentTotals[p.member_id] || 0) + amt;
+      if (p.payment_date && (!lastPaymentDates[p.member_id] || p.payment_date > lastPaymentDates[p.member_id])) {
+        lastPaymentDates[p.member_id] = p.payment_date;
+      }
+    }
+    if (p.member_name) {
+      paymentTotals[p.member_name] = (paymentTotals[p.member_name] || 0) + amt;
+      if (p.payment_date && (!lastPaymentDates[p.member_name] || p.payment_date > lastPaymentDates[p.member_name])) {
+        lastPaymentDates[p.member_name] = p.payment_date;
+      }
+    }
+  });
+
+  return members.map((m) => {
+    const hasPayments = (m.id && paymentTotals[m.id] !== undefined) || (m.name && paymentTotals[m.name] !== undefined);
+    if (!hasPayments) return m;
+
+    const actualCollected = (m.id && paymentTotals[m.id] !== undefined) ? paymentTotals[m.id] : paymentTotals[m.name];
+    const target = Number(m.target_amount) || 0;
+    let status = 'বাকি';
+    if (actualCollected <= 0) {
+      status = 'বাকি';
+    } else if (target > 0 && actualCollected >= target) {
+      status = 'জমা হয়েছে';
+    } else {
+      status = 'আংশিক জমা';
+    }
+
+    const lastDate = (m.id && lastPaymentDates[m.id]) || (m.name && lastPaymentDates[m.name]) || m.last_payment_date;
+
+    return {
+      ...m,
+      collected_amount: actualCollected,
+      status,
+      last_payment_date: lastDate
+    };
+  });
+}
+
 export function loadLocalDB() {
   try {
     // Clean up older cached versions with demo data
@@ -120,6 +171,9 @@ export function loadLocalDB() {
       // If puja_schedule is missing or empty array, inject default schedule
       if (!Array.isArray(parsed.settings.puja_schedule) || parsed.settings.puja_schedule.length === 0) {
         parsed.settings.puja_schedule = initialDatabase.settings.puja_schedule;
+      }
+      if (Array.isArray(parsed.members) && Array.isArray(parsed.payments)) {
+        parsed.members = reconcileMemberBalances(parsed.members, parsed.payments);
       }
       return parsed;
     }
@@ -249,12 +303,16 @@ export async function fetchSupabaseData() {
       })()
     };
 
+    const rawMembers = (membersRes.data || []).map(m => ({
+      ...m,
+      previous_year_amount: Number(m.previous_year_amount) || 0
+    }));
+    const rawPayments = paymentsRes.data || [];
+    const reconciledMembers = reconcileMemberBalances(rawMembers, rawPayments);
+
     return {
-      members: (membersRes.data || []).map(m => ({
-        ...m,
-        previous_year_amount: Number(m.previous_year_amount) || 0
-      })),
-      payments: paymentsRes.data || [],
+      members: reconciledMembers,
+      payments: rawPayments,
       marketEntries: marketRes.data || [],
       expenses: expensesRes.data || [],
       bhogCoupons: bhogRes.data || [],

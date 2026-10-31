@@ -13,8 +13,10 @@ import { formatTaka, toBnDigits } from '../utils/formatters';
 export default function SummaryPage({ db, onUpdateDB, showToast }) {
   const [otherIncomeInput, setOtherIncomeInput] = useState(db.settings?.other_income || 0);
 
-  // Income Breakdown
-  const totalChanda = (db.members || []).reduce((sum, m) => sum + (Number(m.collected_amount) || 0), 0);
+  // Income Breakdown (Uses receipts payments total if available for 100% exact match)
+  const paymentsTotal = (db.payments || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+  const membersTotal = (db.members || []).reduce((sum, m) => sum + (Number(m.collected_amount) || 0), 0);
+  const totalChanda = paymentsTotal > 0 ? paymentsTotal : membersTotal;
   const totalSponsors = (db.sponsors || []).reduce((sum, s) => sum + (Number(s.paid_amount) || 0), 0);
   const otherIncome = Number(db.settings?.other_income) || 0;
   const grandTotalIncome = totalChanda + totalSponsors + otherIncome;

@@ -17,8 +17,10 @@ import { formatTaka, toBnDigits } from '../utils/formatters';
 import { MAA_SHYAMA_IMG } from '../assets/maaShyamaImage';
 
 export default function DashboardPage({ db, onNavigate, onOpenReceipt }) {
-  // Calculations
-  const totalChanda = (db.members || []).reduce((sum, m) => sum + (Number(m.collected_amount) || 0), 0);
+  // Calculations (Uses receipts payments total if available for 100% exact match)
+  const paymentsTotal = (db.payments || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+  const membersTotal = (db.members || []).reduce((sum, m) => sum + (Number(m.collected_amount) || 0), 0);
+  const totalChanda = paymentsTotal > 0 ? paymentsTotal : membersTotal;
   const targetChanda = (db.members || []).reduce((sum, m) => sum + (Number(m.target_amount) || 0), 0);
   const otherIncome = Number(db.settings?.other_income) || 0;
   

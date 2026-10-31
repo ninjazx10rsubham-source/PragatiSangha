@@ -129,7 +129,9 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
   // KPI Computations for Current Year
   const totalTarget = members.reduce((sum, m) => sum + (Number(m.target_amount) || 0), 0);
   const totalPrevious = members.reduce((sum, m) => sum + (Number(m.previous_year_amount) || 0), 0);
-  const totalCollected = members.reduce((sum, m) => sum + (Number(m.collected_amount) || 0), 0);
+  const paymentsTotal = (db.payments || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+  const membersTotal = members.reduce((sum, m) => sum + (Number(m.collected_amount) || 0), 0);
+  const totalCollected = paymentsTotal > 0 ? paymentsTotal : membersTotal;
   const netGrowth = totalTarget - totalPrevious;
 
   const filteredMembers = useMemo(() => {
