@@ -157,22 +157,18 @@ export default function App() {
         (async () => {
           isSavingRef.current = true;
           try {
-            if (next.settings) {
+            if (next.settings && (!prev.settings || JSON.stringify(next.settings) !== JSON.stringify(prev.settings))) {
+              const { puja_schedule, ...rest } = next.settings;
               const settingsPayload = {
                 id: 'primary_settings',
-                club_name: next.settings.club_name,
-                event_name: next.settings.event_name,
-                other_income: next.settings.other_income,
-                membership_types: next.settings.membership_types,
-                market_categories: next.settings.market_categories,
-                expense_categories: next.settings.expense_categories,
-                puja_schedule: next.settings.puja_schedule || []
+                club_name: rest.club_name,
+                event_name: rest.event_name,
+                other_income: rest.other_income,
+                membership_types: rest.membership_types,
+                market_categories: rest.market_categories,
+                expense_categories: rest.expense_categories
               };
-              const { error: setErr } = await supabase.from('settings').upsert(settingsPayload);
-              if (setErr && (setErr.code === '42703' || setErr.message?.includes('puja_schedule'))) {
-                const { puja_schedule, ...rest } = settingsPayload;
-                await supabase.from('settings').upsert(rest);
-              }
+              await supabase.from('settings').upsert(settingsPayload);
             }
 
             // Sync payment deletion if any payment was removed

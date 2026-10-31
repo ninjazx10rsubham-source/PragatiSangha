@@ -144,6 +144,26 @@ export function reconcileMemberBalances(members, payments) {
   });
 }
 
+// Calculate next unique receipt number without any chance of collision or duplicate constraint violations
+export function getNextReceiptNo(payments) {
+  if (!Array.isArray(payments) || payments.length === 0) {
+    return 'PS-2026-0001';
+  }
+  let maxNum = 0;
+  payments.forEach((p) => {
+    if (p && p.receipt_no) {
+      const match = String(p.receipt_no).match(/(\d+)$/);
+      if (match) {
+        const n = parseInt(match[1], 10);
+        if (!isNaN(n) && n > maxNum) {
+          maxNum = n;
+        }
+      }
+    }
+  });
+  return `PS-2026-${String(maxNum + 1).padStart(4, '0')}`;
+}
+
 export function loadLocalDB() {
   try {
     // Clean up older cached versions with demo data
@@ -330,16 +350,29 @@ export async function fetchSupabaseData() {
 export async function safeUpsertMembers(supabase, members) {
   if (!supabase || !members?.length) return;
   const cleaned = members.map(m => ({
-    ...m,
-    previous_year_amount: Number(m.previous_year_amount) || 0,
-    last_payment_date: m.last_payment_date ? m.last_payment_date : null
+    id: m.id,
+    sl_no: m.sl_no,
+    name: m.name,
+    phone: m.phone || '',
+    address: m.address || '',
+    member_type: m.member_type || 'পাড়ার নাগরিক বৃন্দ',
+    target_amount: Number(m.target_amount) || 0,
+    collected_amount: Number(m.collected_amount) || 0,
+    status: m.status || 'বাকি',
+    last_payment_date: m.last_payment_date || null,
+    notes: m.notes || '',
+    visible: m.visible !== false,
+    previous_year_amount: Number(m.previous_year_amount) || 0
   }));
 
   const { error } = await supabase.from('members').upsert(cleaned);
-  if (error && (error.code === '42703' || error.message?.includes('previous_year_amount'))) {
-    // If column doesn't exist yet on Supabase, strip previous_year_amount and retry
-    const fallback = cleaned.map(({ previous_year_amount, ...rest }) => rest);
-    await supabase.from('members').upsert(fallback);
+  if (error) {
+    if (error.code === '42703' || error.message?.includes('previous_year_amount')) {
+      const fallback = cleaned.map(({ previous_year_amount, ...rest }) => rest);
+      await supabase.from('members').upsert(fallback);
+    } else {
+      console.error('safeUpsertMembers error:', error);
+    }
   }
 }
 

@@ -34,7 +34,7 @@ import confetti from 'canvas-confetti';
 import Modal from '../components/Modal';
 import { formatTaka, toBnDigits } from '../utils/formatters';
 import { exportMembersToExcel, exportPreviousYearMembersToExcel, getWhatsAppDueReminderUrl } from '../services/exportService';
-import { deleteMemberFromSupabase, deletePreviousYearMemberFromSupabase, defaultPreviousYearMembers } from '../services/dataService';
+import { deleteMemberFromSupabase, deletePreviousYearMemberFromSupabase, defaultPreviousYearMembers, getNextReceiptNo } from '../services/dataService';
 import { getMemberBillNo, encodeMemberBillNo } from '../utils/billHelper';
 
 export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }) {
@@ -298,8 +298,7 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
     const target = Number(member.target_amount) || 0;
     const newStatus = deriveStatus(target, newCollected);
 
-    const totalExistingPayments = (db.payments || []).length;
-    const receiptNo = `PS-2026-${String(totalExistingPayments + 1).padStart(4, '0')}`;
+    const receiptNo = getNextReceiptNo(db.payments);
 
     const newPayment = {
       id: 'pay_' + Date.now(),
