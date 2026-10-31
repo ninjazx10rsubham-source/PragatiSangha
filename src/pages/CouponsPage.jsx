@@ -15,7 +15,8 @@ import {
   AlertTriangle,
   Save,
   CheckCircle2,
-  DollarSign
+  DollarSign,
+  Coins
 } from 'lucide-react';
 import Modal from '../components/Modal';
 import { formatTaka, toBnDigits, formatBnDate } from '../utils/formatters';
@@ -24,7 +25,7 @@ import { getNextCouponNo } from '../services/dataService';
 
 export default function CouponsPage({ db, onUpdateDB, showToast }) {
   const [search, setSearch] = useState('');
-  const [modeFilter, setModeFilter] = useState('সব');
+  const [filterTab, setFilterTab] = useState('সব'); // 'সব' | '₹10 কুপন' | '₹20 কুপন' | 'নগদ' | 'UPI'
   
   // Modal states: 'add' | 'edit' | 'delete'
   const [modalState, setModalState] = useState(null); // { type, coupon }
@@ -36,8 +37,8 @@ export default function CouponsPage({ db, onUpdateDB, showToast }) {
     donor_name: '',
     phone: '',
     coupon_count: 1,
-    rate: 50,
-    amount: 50,
+    rate: 10,
+    amount: 10,
     payment_mode: 'নগদ',
     payment_date: new Date().toISOString().split('T')[0],
     collected_by: 'কোষাধ্যক্ষ',
@@ -53,14 +54,36 @@ export default function CouponsPage({ db, onUpdateDB, showToast }) {
         (c.phone && c.phone.includes(search)) ||
         (c.collected_by && c.collected_by.toLowerCase().includes(search.toLowerCase()));
 
-      const matchMode = modeFilter === 'সব' || c.payment_mode === modeFilter;
-      return matchSearch && matchMode;
+      let matchFilter = true;
+      if (filterTab === '₹10 কুপন') {
+        matchFilter = Number(c.rate) === 10;
+      } else if (filterTab === '₹20 কুপন') {
+        matchFilter = Number(c.rate) === 20;
+      } else if (filterTab === 'নগদ') {
+        matchFilter = c.payment_mode === 'নগদ';
+      } else if (filterTab === 'UPI') {
+        matchFilter = c.payment_mode === 'UPI';
+      }
+
+      return matchSearch && matchFilter;
     });
-  }, [coupons, search, modeFilter]);
+  }, [coupons, search, filterTab]);
 
   // Statistics
   const totalCollected = coupons.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
   const totalCount = coupons.reduce((sum, c) => sum + (Number(c.coupon_count) || 0), 0);
+
+  // ₹10 & ₹20 breakdowns
+  const coupons10 = coupons.filter(c => Number(c.rate) === 10);
+  const count10 = coupons10.reduce((sum, c) => sum + (Number(c.coupon_count) || 0), 0);
+  const amt10 = coupons10.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+
+  const coupons20 = coupons.filter(c => Number(c.rate) === 20);
+  const count20 = coupons20.reduce((sum, c) => sum + (Number(c.coupon_count) || 0), 0);
+  const amt20 = coupons20.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+
+  const cashTotal = coupons.filter(c => c.payment_mode !== 'UPI').reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+  const upiTotal = coupons.filter(c => c.payment_mode === 'UPI').reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
 
   // Open Add Modal
   const handleOpenAdd = () => {
@@ -70,8 +93,8 @@ export default function CouponsPage({ db, onUpdateDB, showToast }) {
       donor_name: '',
       phone: '',
       coupon_count: 1,
-      rate: 50,
-      amount: 50,
+      rate: 10,
+      amount: 10,
       payment_mode: 'নগদ',
       payment_date: new Date().toISOString().split('T')[0],
       collected_by: 'কোষাধ্যক্ষ',
@@ -82,19 +105,44 @@ export default function CouponsPage({ db, onUpdateDB, showToast }) {
 
   // Open Edit Modal
   const handleOpenEdit = (coupon) => {
+    const rateVal = Number(coupon.rate) || 10;
+    const countVal = Number(coupon.coupon_count) || 1;
+    const amtVal = Number(coupon.amount) || (rateVal * countVal);
+
     setForm({
       coupon_no: coupon.coupon_no || '',
       donor_name: coupon.donor_name || '',
       phone: coupon.phone || '',
-      coupon_count: coupon.coupon_count || 1,
-      rate: coupon.rate || 50,
-      amount: coupon.amount || 50,
+      coupon_count: countVal,
+      rate: rateVal,
+      amount: amtVal,
       payment_mode: coupon.payment_mode || 'নগদ',
       payment_date: coupon.payment_date || new Date().toISOString().split('T')[0],
       collected_by: coupon.collected_by || 'কোষাধ্যক্ষ',
       notes: coupon.notes || ''
     });
     setModalState({ type: 'edit', coupon });
+  };
+
+  // Helper to change rate & recalculate amount
+  const handleSelectRate = (newRate) => {
+    const count = Number(form.coupon_count) || 1;
+    setForm(prev => ({
+      ...prev,
+      rate: newRate,
+      amount: count * newRate
+    }));
+  };
+
+  // Helper to change count & recalculate amount
+  const handleCountChange = (newCount) => {
+    const count = Math.max(1, parseInt(newCount, 10) || 1);
+    const rate = Number(form.rate) || 10;
+    setForm(prev => ({
+      ...prev,
+      coupon_count: count,
+      amount: count * rate
+    }));
   };
 
   // Save Add / Edit
@@ -118,7 +166,7 @@ export default function CouponsPage({ db, onUpdateDB, showToast }) {
         donor_name: form.donor_name.trim(),
         phone: form.phone.trim(),
         coupon_count: Number(form.coupon_count) || 1,
-        rate: Number(form.rate) || 50,
+        rate: Number(form.rate) || 10,
         amount: amt,
         payment_mode: form.payment_mode,
         payment_date: form.payment_date,
@@ -140,7 +188,7 @@ export default function CouponsPage({ db, onUpdateDB, showToast }) {
         donor_name: form.donor_name.trim(),
         phone: form.phone.trim(),
         coupon_count: Number(form.coupon_count) || 1,
-        rate: Number(form.rate) || 50,
+        rate: Number(form.rate) || 10,
         amount: amt,
         payment_mode: form.payment_mode,
         payment_date: form.payment_date,
@@ -184,7 +232,7 @@ export default function CouponsPage({ db, onUpdateDB, showToast }) {
             <span>কুপন থেকে তোলা টাকা ও হিসাব</span>
           </h2>
           <p className="text-xs sm:text-sm text-stone-500">
-            পূজা উপলক্ষে কুপন বিক্রি থেকে মোট সংগৃহীত টাকার দৈনিক ও পূর্ণাঙ্গ হিসাব খাতা
+            পূজা উপলক্ষে ১০ টাকা ও ২০ টাকার কুপন বিক্রি থেকে সংগৃহীত টাকার দৈনিক ও পূর্ণাঙ্গ হিসাব খাতা
           </p>
         </div>
 
@@ -207,35 +255,67 @@ export default function CouponsPage({ db, onUpdateDB, showToast }) {
         </div>
       </div>
 
-      {/* KPI Stats Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-4 rounded-2xl bg-[#FFFDF7] border border-[#EADBB6] flex items-center gap-3.5 shadow-sm">
-          <div className="p-3 rounded-xl bg-emerald-100 text-emerald-800">
-            <Wallet size={24} />
+      {/* KPI Stats Bar - 10 Tk & 20 Tk focused */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Total Collected */}
+        <div className="p-4 rounded-2xl bg-gradient-to-br from-[#4A0E17] to-[#7B1113] text-white shadow-md relative overflow-hidden">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-amber-300 uppercase tracking-wider">মোট কুপন আদায়</span>
+            <div className="p-2 rounded-xl bg-white/10 text-amber-300">
+              <Wallet size={20} />
+            </div>
           </div>
-          <div>
-            <span className="text-xs text-stone-500 font-bold uppercase block">কুপন থেকে মোট আদায়</span>
-            <p className="text-2xl font-extrabold text-[#4A0E17]">{formatTaka(totalCollected)}</p>
-          </div>
+          <p className="text-2xl font-extrabold text-white">{formatTaka(totalCollected)}</p>
+          <p className="text-xs text-amber-200/80 mt-1">
+            মোট বিক্রীত কুপন: <span className="font-bold text-white">{toBnDigits(totalCount)}</span> টি ({toBnDigits(coupons.length)} এন্ট্রি)
+          </p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-[#FFFDF7] border border-[#EADBB6] flex items-center gap-3.5 shadow-sm">
-          <div className="p-3 rounded-xl bg-amber-100 text-amber-800">
-            <Ticket size={24} />
+        {/* 10 Taka Coupons */}
+        <div className="p-4 rounded-2xl bg-[#FFFDF7] border-2 border-amber-300 shadow-sm relative">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-amber-900 uppercase">১০ টাকার কুপন আদায়</span>
+            <span className="px-2 py-0.5 rounded-full text-xs font-extrabold bg-amber-100 text-amber-800 border border-amber-300">
+              ₹১০
+            </span>
           </div>
-          <div>
-            <span className="text-xs text-stone-500 font-bold uppercase block">মোট বিক্রীত কুপন সংখ্যা</span>
-            <p className="text-2xl font-extrabold text-stone-900">{toBnDigits(totalCount)} <span className="text-sm font-semibold text-stone-500">টি</span></p>
-          </div>
+          <p className="text-2xl font-extrabold text-amber-900">{formatTaka(amt10)}</p>
+          <p className="text-xs text-stone-500 mt-1">
+            বিক্রি হয়েছে: <span className="font-bold text-amber-900">{toBnDigits(count10)}</span> টি কুপন
+          </p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-[#FFFDF7] border border-[#EADBB6] flex items-center gap-3.5 shadow-sm">
-          <div className="p-3 rounded-xl bg-rose-100 text-[#800020]">
-            <Tag size={24} />
+        {/* 20 Taka Coupons */}
+        <div className="p-4 rounded-2xl bg-[#FFFDF7] border-2 border-emerald-300 shadow-sm relative">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-emerald-900 uppercase">২০ টাকার কুপন আদায়</span>
+            <span className="px-2 py-0.5 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">
+              ₹২০
+            </span>
           </div>
-          <div>
-            <span className="text-xs text-stone-500 font-bold uppercase block">মোট কালেকশন এন্ট্রি</span>
-            <p className="text-2xl font-extrabold text-[#800020]">{toBnDigits(coupons.length)} <span className="text-sm font-semibold text-stone-500">টি রেকর্ড</span></p>
+          <p className="text-2xl font-extrabold text-emerald-900">{formatTaka(amt20)}</p>
+          <p className="text-xs text-stone-500 mt-1">
+            বিক্রি হয়েছে: <span className="font-bold text-emerald-900">{toBnDigits(count20)}</span> টি কুপন
+          </p>
+        </div>
+
+        {/* Mode Split */}
+        <div className="p-4 rounded-2xl bg-[#FFFDF7] border border-[#EADBB6] shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-stone-500 uppercase">নগদ / UPI মাধ্যম</span>
+            <div className="p-2 rounded-xl bg-stone-100 text-stone-700">
+              <Coins size={18} />
+            </div>
+          </div>
+          <div className="space-y-1 mt-1">
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-stone-600 font-medium">নগদ আদায়:</span>
+              <span className="font-extrabold text-stone-900">{formatTaka(cashTotal)}</span>
+            </div>
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-stone-600 font-medium">অনলাইন / UPI:</span>
+              <span className="font-extrabold text-[#800020]">{formatTaka(upiTotal)}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -253,16 +333,16 @@ export default function CouponsPage({ db, onUpdateDB, showToast }) {
           />
         </div>
 
-        <div className="flex items-center gap-1.5 bg-[#FFFDF7] p-1 rounded-xl border border-stone-200 shrink-0">
-          {['সব', 'নগদ', 'UPI'].map((m) => (
+        <div className="flex items-center gap-1.5 bg-[#FFFDF7] p-1 rounded-xl border border-stone-200 shrink-0 overflow-x-auto">
+          {['সব', '₹10 কুপন', '₹20 কুপন', 'নগদ', 'UPI'].map((tab) => (
             <button
-              key={m}
-              onClick={() => setModeFilter(m)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                modeFilter === m ? 'bg-[#4A0E17] text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'
+              key={tab}
+              onClick={() => setFilterTab(tab)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+                filterTab === tab ? 'bg-[#4A0E17] text-amber-300 shadow-xs' : 'text-stone-600 hover:text-stone-900'
               }`}
             >
-              {m}
+              {tab}
             </button>
           ))}
         </div>
@@ -272,7 +352,9 @@ export default function CouponsPage({ db, onUpdateDB, showToast }) {
       <div className="bg-[#FFFDF7] rounded-2xl border border-[#EADBB6] shadow-sm overflow-hidden">
         {filteredCoupons.length === 0 ? (
           <div className="p-12 text-center text-stone-500 text-sm">
-            এখনো কোনো কুপন আদায়ের হিসাব পাওয়া যায়নি। উপরে "+ নতুন কুপন আদায়" বাটনে ক্লিক করে প্রথম এন্ট্রি দিন।
+            {search || filterTab !== 'সব' 
+              ? 'আপনার ফিল্টারে কোনো কুপন এন্ট্রি পাওয়া যায়নি।' 
+              : 'এখনো কোনো কুপন আদায়ের হিসাব পাওয়া যায়নি। উপরে "+ নতুন কুপন আদায়" বাটনে ক্লিক করে প্রথম এন্ট্রি দিন।'}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -281,8 +363,8 @@ export default function CouponsPage({ db, onUpdateDB, showToast }) {
                 <tr>
                   <th className="py-3 px-4">কুপন / বই নং</th>
                   <th className="py-3 px-4">ক্রেতা / দাতার নাম</th>
-                  <th className="py-3 px-4">কুপন সংখ্যা</th>
-                  <th className="py-3 px-4">দর (₹)</th>
+                  <th className="py-3 px-4">কুপনের ধরন</th>
+                  <th className="py-3 px-4">সংখ্যা</th>
                   <th className="py-3 px-4">মোট আদায় (₹)</th>
                   <th className="py-3 px-4">তারিখ</th>
                   <th className="py-3 px-4">মাধ্যম</th>
@@ -292,6 +374,9 @@ export default function CouponsPage({ db, onUpdateDB, showToast }) {
               </thead>
               <tbody className="divide-y divide-stone-100">
                 {filteredCoupons.map((c) => {
+                  const rateVal = Number(c.rate) || 10;
+                  const is10 = rateVal === 10;
+                  const is20 = rateVal === 20;
                   const waUrl = getWhatsAppCouponUrl(c.phone, c, db.settings?.club_name || 'প্রগতি সংঘ');
 
                   return (
@@ -307,11 +392,25 @@ export default function CouponsPage({ db, onUpdateDB, showToast }) {
                           </span>
                         )}
                       </td>
-                      <td className="py-3 px-4 font-semibold text-stone-800">
-                        {toBnDigits(c.coupon_count || 1)} টি
+                      <td className="py-3 px-4">
+                        {is10 && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-amber-50 text-amber-900 border border-amber-300">
+                            🎟️ ₹10 কুপন
+                          </span>
+                        )}
+                        {is20 && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-900 border border-emerald-300">
+                            🎟️ ₹20 কুপন
+                          </span>
+                        )}
+                        {!is10 && !is20 && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-stone-100 text-stone-700 border border-stone-200">
+                            ₹{toBnDigits(rateVal)}
+                          </span>
+                        )}
                       </td>
-                      <td className="py-3 px-4 text-stone-600">
-                        ₹{toBnDigits(c.rate || 50)}
+                      <td className="py-3 px-4 font-bold text-stone-800">
+                        {toBnDigits(c.coupon_count || 1)} <span className="text-xs font-normal text-stone-500">টি</span>
                       </td>
                       <td className="py-3 px-4 font-extrabold text-emerald-700 text-sm">
                         {formatTaka(c.amount)}
@@ -320,7 +419,11 @@ export default function CouponsPage({ db, onUpdateDB, showToast }) {
                         {formatBnDate(c.payment_date)}
                       </td>
                       <td className="py-3 px-4">
-                        <span className="px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-800 font-semibold text-xs border border-stone-200">
+                        <span className={`px-2.5 py-0.5 rounded-full font-semibold text-xs border ${
+                          c.payment_mode === 'UPI' 
+                            ? 'bg-purple-50 text-purple-700 border-purple-200' 
+                            : 'bg-stone-100 text-stone-800 border-stone-200'
+                        }`}>
                           {c.payment_mode || 'নগদ'}
                         </span>
                       </td>
@@ -328,14 +431,14 @@ export default function CouponsPage({ db, onUpdateDB, showToast }) {
                         {c.collected_by || '-'}
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5 sm:gap-2">
-                          {waUrl && (
+                        <div className="flex items-center justify-end gap-1.5">
+                          {c.phone && (
                             <a
                               href={waUrl}
                               target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold transition border border-emerald-200"
-                              title="WhatsApp-এ স্বীকৃতি পাঠান"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold transition shadow-xs"
+                              title="WhatsApp-এ কুপন প্রাপ্তি স্বীকার পাঠান"
                             >
                               <Share2 size={13} />
                               <span className="hidden sm:inline">WhatsApp</span>
@@ -377,6 +480,46 @@ export default function CouponsPage({ db, onUpdateDB, showToast }) {
           onClose={() => setModalState(null)}
         >
           <form onSubmit={handleSave} className="space-y-4 text-xs sm:text-sm">
+            {/* Coupon Denomination (10 Tk vs 20 Tk) Selection */}
+            <div>
+              <label className="block font-bold text-stone-800 mb-1.5">
+                কুপনের মূল্য নির্বাচন করুন *
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleSelectRate(10)}
+                  className={`p-3 rounded-xl border-2 font-bold transition flex items-center justify-center gap-2 ${
+                    Number(form.rate) === 10
+                      ? 'border-[#800020] bg-[#4A0E17] text-amber-300 shadow-md ring-2 ring-amber-300/40'
+                      : 'border-stone-200 bg-white text-stone-700 hover:border-amber-300 hover:bg-amber-50/50'
+                  }`}
+                >
+                  <Ticket size={18} />
+                  <div className="text-left">
+                    <div className="text-sm font-extrabold">₹১০ কুপন</div>
+                    <div className="text-[10px] opacity-80">দশ টাকার কুপন</div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSelectRate(20)}
+                  className={`p-3 rounded-xl border-2 font-bold transition flex items-center justify-center gap-2 ${
+                    Number(form.rate) === 20
+                      ? 'border-[#800020] bg-[#4A0E17] text-amber-300 shadow-md ring-2 ring-emerald-300/40'
+                      : 'border-stone-200 bg-white text-stone-700 hover:border-emerald-300 hover:bg-emerald-50/50'
+                  }`}
+                >
+                  <Ticket size={18} />
+                  <div className="text-left">
+                    <div className="text-sm font-extrabold">₹২০ কুপন</div>
+                    <div className="text-[10px] opacity-80">কুড়ি টাকার কুপন</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block font-bold text-stone-700 mb-1">কুপন / বই নম্বর *</label>
@@ -397,66 +540,80 @@ export default function CouponsPage({ db, onUpdateDB, showToast }) {
                   required
                   value={form.donor_name}
                   onChange={(e) => setForm(prev => ({ ...prev, donor_name: e.target.value }))}
-                  placeholder="যেমন: শ্রী অনিল দাস / সাধারণ ভক্ত"
+                  placeholder="যেমন: শ্রী অনিল দাস / ভক্ত"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white font-semibold focus:ring-2 focus:ring-[#800020]"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block font-bold text-stone-700 mb-1">কুপন সংখ্যা *</label>
+            {/* Quick Count Selector */}
+            <div>
+              <label className="block font-bold text-stone-700 mb-1">কুপন সংখ্যা (ক'টি কুপন দেওয়া হয়েছে) *</label>
+              <div className="flex items-center gap-2 mb-2">
                 <input
                   type="number"
                   min="1"
                   required
                   value={form.coupon_count}
-                  onChange={(e) => {
-                    const count = Math.max(1, parseInt(e.target.value, 10) || 1);
-                    const newAmt = count * (Number(form.rate) || 50);
-                    setForm(prev => ({ ...prev, coupon_count: count, amount: newAmt }));
-                  }}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white font-bold focus:ring-2 focus:ring-[#800020]"
+                  onChange={(e) => handleCountChange(e.target.value)}
+                  className="w-32 px-3.5 py-2 rounded-xl border border-stone-300 bg-white font-bold text-base focus:ring-2 focus:ring-[#800020]"
                 />
-              </div>
+                <span className="text-xs text-stone-500 font-semibold">টি</span>
 
+                <div className="flex items-center gap-1.5 overflow-x-auto ml-2">
+                  {[1, 2, 5, 10, 20, 50].map(qty => (
+                    <button
+                      key={qty}
+                      type="button"
+                      onClick={() => handleCountChange(qty)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${
+                        Number(form.coupon_count) === qty
+                          ? 'bg-[#4A0E17] text-white border-[#4A0E17]'
+                          : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border-stone-200'
+                      }`}
+                    >
+                      {qty}টি
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block font-bold text-stone-700 mb-1">প্রতিটির দর (₹) *</label>
+                <label className="block font-bold text-stone-700 mb-1">প্রতিটির দর (₹)</label>
                 <input
                   type="number"
                   min="1"
                   required
                   value={form.rate}
                   onChange={(e) => {
-                    const rate = Number(e.target.value) || 0;
-                    const newAmt = (Number(form.coupon_count) || 1) * rate;
-                    setForm(prev => ({ ...prev, rate, amount: newAmt }));
+                    const r = Number(e.target.value) || 0;
+                    handleSelectRate(r);
                   }}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white font-bold focus:ring-2 focus:ring-[#800020]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-stone-50 font-bold focus:ring-2 focus:ring-[#800020]"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-stone-700 mb-1">মোট আদায় (₹) *</label>
-                <input
-                  type="number"
-                  min="1"
-                  required
-                  value={form.amount}
-                  onChange={(e) => setForm(prev => ({ ...prev, amount: e.target.value }))}
-                  className="w-full px-3.5 py-2.5 rounded-xl border-2 border-emerald-600 bg-emerald-50/50 font-extrabold text-emerald-800 text-base focus:ring-2 focus:ring-emerald-600"
-                />
+                <label className="block font-bold text-stone-700 mb-1">মোট আদায় (₹) [স্বয়ংক্রিয়]</label>
+                <div className="px-3.5 py-2.5 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-800 font-extrabold text-base flex items-center justify-between">
+                  <span>{formatTaka(form.amount)}</span>
+                  <span className="text-xs font-normal text-emerald-600">
+                    ({form.coupon_count} টি × ₹{form.rate})
+                  </span>
+                </div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block font-bold text-stone-700 mb-1">পেমেন্টের তারিখ *</label>
+                <label className="block font-bold text-stone-700 mb-1">মোবাইল নম্বর (ঐচ্ছিক)</label>
                 <input
-                  type="date"
-                  required
-                  value={form.payment_date}
-                  onChange={(e) => setForm(prev => ({ ...prev, payment_date: e.target.value }))}
+                  type="tel"
+                  value={form.phone}
+                  onChange={(e) => setForm(prev => ({ ...prev, phone: e.target.value }))}
+                  placeholder="যেমন: 9876543210"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white focus:ring-2 focus:ring-[#800020]"
                 />
               </div>
@@ -466,20 +623,20 @@ export default function CouponsPage({ db, onUpdateDB, showToast }) {
                 <select
                   value={form.payment_mode}
                   onChange={(e) => setForm(prev => ({ ...prev, payment_mode: e.target.value }))}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white font-medium focus:ring-2 focus:ring-[#800020]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white font-semibold focus:ring-2 focus:ring-[#800020]"
                 >
-                  <option value="নগদ">নগদ</option>
-                  <option value="UPI">UPI</option>
+                  <option value="নগদ">নগদ (Cash)</option>
+                  <option value="UPI">UPI / অনলাইন</option>
+                  <option value="অন্যান্য">অন্যান্য</option>
                 </select>
               </div>
 
               <div>
-                <label className="block font-bold text-stone-700 mb-1">মোবাইল নম্বর (ঐচ্ছিক)</label>
+                <label className="block font-bold text-stone-700 mb-1">জমার তারিখ</label>
                 <input
-                  type="tel"
-                  value={form.phone}
-                  onChange={(e) => setForm(prev => ({ ...prev, phone: e.target.value }))}
-                  placeholder="যেমন: 9830012345"
+                  type="date"
+                  value={form.payment_date}
+                  onChange={(e) => setForm(prev => ({ ...prev, payment_date: e.target.value }))}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white focus:ring-2 focus:ring-[#800020]"
                 />
               </div>
@@ -487,12 +644,12 @@ export default function CouponsPage({ db, onUpdateDB, showToast }) {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block font-bold text-stone-700 mb-1">আদায়কারী / সংগ্রাহক</label>
+                <label className="block font-bold text-stone-700 mb-1">আদায়কারী সদস্য</label>
                 <input
                   type="text"
                   value={form.collected_by}
                   onChange={(e) => setForm(prev => ({ ...prev, collected_by: e.target.value }))}
-                  placeholder="যেমন: কোষাধ্যক্ষ / সদস্যের নাম"
+                  placeholder="যেমন: কোষাধ্যক্ষ / শ্যামল দাস"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white focus:ring-2 focus:ring-[#800020]"
                 />
               </div>
@@ -554,8 +711,8 @@ export default function CouponsPage({ db, onUpdateDB, showToast }) {
                 <span className="font-bold text-stone-900">{modalState.coupon.donor_name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-stone-500">কুপন সংখ্যা:</span>
-                <span className="font-semibold text-stone-800">{modalState.coupon.coupon_count} টি</span>
+                <span className="text-stone-500">কুপন দর ও সংখ্যা:</span>
+                <span className="font-semibold text-stone-800">₹{modalState.coupon.rate || 10} × {modalState.coupon.coupon_count} টি</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-stone-500">মোট আদায়:</span>

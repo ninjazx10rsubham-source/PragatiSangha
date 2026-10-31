@@ -20,7 +20,7 @@ export function getNextCouponNo(coupons) {
 
 export function parseCoupon(raw) {
   let amount = 0;
-  let rate = 50;
+  let rate = 10;
   let collector = 'কোষাধ্যক্ষ';
   let cleanNotes = raw.notes || '';
 
@@ -30,7 +30,7 @@ export function parseCoupon(raw) {
       try {
         const meta = JSON.parse(match[1]);
         amount = Number(meta.amt) || 0;
-        rate = Number(meta.rate) || 50;
+        rate = Number(meta.rate) || 10;
         collector = meta.col || 'কোষাধ্যক্ষ';
         cleanNotes = raw.notes.replace(/\[CPN_META:.*?\]\s*/, '');
       } catch (e) {}
@@ -63,7 +63,7 @@ export function parseCoupon(raw) {
 export function encodeCouponForSupabase(c) {
   const meta = JSON.stringify({
     amt: Number(c.amount) || 0,
-    rate: Number(c.rate) || 50,
+    rate: Number(c.rate) || 10,
     col: c.collected_by || 'কোষাধ্যক্ষ'
   });
   return {
