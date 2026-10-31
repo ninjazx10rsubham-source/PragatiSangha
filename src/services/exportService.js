@@ -164,17 +164,11 @@ _প্রগতি সংঘ পূজা কমিটি_`;
 export function exportCouponsToExcel(coupons) {
   const data = (coupons || []).map((c, idx) => ({
     'ক্রমিক': idx + 1,
-    'কুপন / বই নং': c.coupon_no || '-',
-    'ক্রেতা / দাতার নাম': c.donor_name || '-',
-    'মোবাইল নম্বর': c.phone || '-',
-    'কুপনের ধরন': (Number(c.rate) === 20 ? '₹20 কুপন' : '₹10 কুপন'),
-    'কুপন সংখ্যা': Number(c.coupon_count) || 1,
-    'দর (₹)': Number(c.rate) || 10,
-    'মোট আদায় (₹)': Number(c.amount) || 0,
-    'পেমেন্ট তারিখ': c.payment_date || '-',
-    'পেমেন্ট মাধ্যম': c.payment_mode || 'নগদ',
-    'আদায়কারী': c.collected_by || '-',
-    'মন্তব্য': c.notes || '-'
+    'তারিখ': c.date || c.payment_date || '-',
+    'কোথা থেকে তোলা হলো': c.source_location || c.donor_name || '-',
+    'কী উদ্দেশ্যে তোলা হলো': c.purpose || '-',
+    'কত টাকা উঠল (₹)': Number(c.amount) || 0,
+    'পেমেন্ট মাধ্যম': c.payment_mode || 'নগদ'
   }));
 
   exportToExcel(data, 'প্রগতি_সংঘ_কুপন_কালেকশন_হিসাব', 'কুপন কালেকশন');

@@ -5,205 +5,136 @@ import {
   Plus, 
   Edit3, 
   Trash2, 
-  Share2, 
   Download, 
   Wallet, 
   Calendar, 
-  Phone,
-  User,
-  Tag,
+  MapPin,
+  Target,
   AlertTriangle,
   Save,
   CheckCircle2,
-  DollarSign,
-  Coins
+  Clock
 } from 'lucide-react';
 import Modal from '../components/Modal';
 import { formatTaka, toBnDigits, formatBnDate } from '../utils/formatters';
-import { exportCouponsToExcel, getWhatsAppCouponUrl } from '../services/exportService';
-import { getNextCouponNo } from '../services/dataService';
+import { exportCouponsToExcel } from '../services/exportService';
 
 export default function CouponsPage({ db, onUpdateDB, showToast }) {
   const [search, setSearch] = useState('');
-  const [filterTab, setFilterTab] = useState('সব'); // 'সব' | '₹10 কুপন' | '₹20 কুপন' | 'নগদ' | 'UPI'
   
-  // Modal states: 'add' | 'edit' | 'delete'
-  const [modalState, setModalState] = useState(null); // { type, coupon }
+  // Modal states: null | { type: 'add' } | { type: 'edit', coupon } | { type: 'delete', coupon }
+  const [modalState, setModalState] = useState(null);
 
   const coupons = db.bhogCoupons || [];
 
+  const todayStr = new Date().toISOString().split('T')[0];
+
   const [form, setForm] = useState({
-    coupon_no: '',
-    donor_name: '',
-    phone: '',
-    coupon_count: 1,
-    rate: 10,
-    amount: 10,
-    payment_mode: 'নগদ',
-    payment_date: new Date().toISOString().split('T')[0],
-    collected_by: 'কোষাধ্যক্ষ',
-    notes: ''
+    date: todayStr,
+    amount: '',
+    source_location: '',
+    purpose: '',
+    payment_mode: 'নগদ'
   });
 
   const filteredCoupons = useMemo(() => {
     return coupons.filter((c) => {
       const matchSearch =
         !search ||
-        (c.coupon_no && c.coupon_no.toLowerCase().includes(search.toLowerCase())) ||
-        (c.donor_name && c.donor_name.toLowerCase().includes(search.toLowerCase())) ||
-        (c.phone && c.phone.includes(search)) ||
-        (c.collected_by && c.collected_by.toLowerCase().includes(search.toLowerCase()));
+        (c.source_location && c.source_location.toLowerCase().includes(search.toLowerCase())) ||
+        (c.purpose && c.purpose.toLowerCase().includes(search.toLowerCase())) ||
+        (c.date && c.date.includes(search)) ||
+        (c.amount && String(c.amount).includes(search));
 
-      let matchFilter = true;
-      if (filterTab === '₹10 কুপন') {
-        matchFilter = Number(c.rate) === 10;
-      } else if (filterTab === '₹20 কুপন') {
-        matchFilter = Number(c.rate) === 20;
-      } else if (filterTab === 'নগদ') {
-        matchFilter = c.payment_mode === 'নগদ';
-      } else if (filterTab === 'UPI') {
-        matchFilter = c.payment_mode === 'UPI';
-      }
-
-      return matchSearch && matchFilter;
+      return matchSearch;
     });
-  }, [coupons, search, filterTab]);
+  }, [coupons, search]);
 
   // Statistics
-  const totalCollected = coupons.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
-  const totalCount = coupons.reduce((sum, c) => sum + (Number(c.coupon_count) || 0), 0);
-
-  // ₹10 & ₹20 breakdowns
-  const coupons10 = coupons.filter(c => Number(c.rate) === 10);
-  const count10 = coupons10.reduce((sum, c) => sum + (Number(c.coupon_count) || 0), 0);
-  const amt10 = coupons10.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
-
-  const coupons20 = coupons.filter(c => Number(c.rate) === 20);
-  const count20 = coupons20.reduce((sum, c) => sum + (Number(c.coupon_count) || 0), 0);
-  const amt20 = coupons20.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
-
-  const cashTotal = coupons.filter(c => c.payment_mode !== 'UPI').reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
-  const upiTotal = coupons.filter(c => c.payment_mode === 'UPI').reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+  const totalAmount = coupons.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+  const todayAmount = coupons
+    .filter(c => (c.date || c.payment_date) === todayStr)
+    .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
 
   // Open Add Modal
   const handleOpenAdd = () => {
-    const nextNo = getNextCouponNo(coupons);
     setForm({
-      coupon_no: nextNo,
-      donor_name: '',
-      phone: '',
-      coupon_count: 1,
-      rate: 10,
-      amount: 10,
-      payment_mode: 'নগদ',
-      payment_date: new Date().toISOString().split('T')[0],
-      collected_by: 'কোষাধ্যক্ষ',
-      notes: ''
+      date: todayStr,
+      amount: '',
+      source_location: '',
+      purpose: '',
+      payment_mode: 'নগদ'
     });
     setModalState({ type: 'add' });
   };
 
   // Open Edit Modal
-  const handleOpenEdit = (coupon) => {
-    const rateVal = Number(coupon.rate) || 10;
-    const countVal = Number(coupon.coupon_count) || 1;
-    const amtVal = Number(coupon.amount) || (rateVal * countVal);
-
+  const handleOpenEdit = (c) => {
     setForm({
-      coupon_no: coupon.coupon_no || '',
-      donor_name: coupon.donor_name || '',
-      phone: coupon.phone || '',
-      coupon_count: countVal,
-      rate: rateVal,
-      amount: amtVal,
-      payment_mode: coupon.payment_mode || 'নগদ',
-      payment_date: coupon.payment_date || new Date().toISOString().split('T')[0],
-      collected_by: coupon.collected_by || 'কোষাধ্যক্ষ',
-      notes: coupon.notes || ''
+      date: c.date || c.payment_date || todayStr,
+      amount: c.amount || '',
+      source_location: c.source_location || c.donor_name || '',
+      purpose: c.purpose || '',
+      payment_mode: c.payment_mode || 'নগদ'
     });
-    setModalState({ type: 'edit', coupon });
-  };
-
-  // Helper to change rate & recalculate amount
-  const handleSelectRate = (newRate) => {
-    const count = Number(form.coupon_count) || 1;
-    setForm(prev => ({
-      ...prev,
-      rate: newRate,
-      amount: count * newRate
-    }));
-  };
-
-  // Helper to change count & recalculate amount
-  const handleCountChange = (newCount) => {
-    const count = Math.max(1, parseInt(newCount, 10) || 1);
-    const rate = Number(form.rate) || 10;
-    setForm(prev => ({
-      ...prev,
-      coupon_count: count,
-      amount: count * rate
-    }));
+    setModalState({ type: 'edit', coupon: c });
   };
 
   // Save Add / Edit
   const handleSave = (e) => {
     e.preventDefault();
-    if (!form.donor_name.trim()) {
-      showToast('অনুগ্রহ করে ক্রেতা বা দাতার নাম লিখুন', 'error');
-      return;
-    }
 
     const amt = Number(form.amount) || 0;
     if (amt <= 0) {
-      showToast('সঠিক টাকার পরিমাণ দিন', 'error');
+      showToast('অনুগ্রহ করে সঠিক টাকার পরিমাণ লিখুন', 'error');
+      return;
+    }
+
+    if (!form.source_location.trim()) {
+      showToast('টাকা কোথা থেকে তোলা হলো তা লিখুন', 'error');
+      return;
+    }
+
+    if (!form.purpose.trim()) {
+      showToast('কী উদ্দেশ্যে তোলা হলো তা লিখুন', 'error');
       return;
     }
 
     if (modalState.type === 'add') {
-      const newCoupon = {
+      const newEntry = {
         id: 'cpn_' + Date.now(),
-        coupon_no: form.coupon_no.trim() || getNextCouponNo(coupons),
-        donor_name: form.donor_name.trim(),
-        phone: form.phone.trim(),
-        coupon_count: Number(form.coupon_count) || 1,
-        rate: Number(form.rate) || 10,
+        date: form.date,
         amount: amt,
-        payment_mode: form.payment_mode,
-        payment_date: form.payment_date,
-        collected_by: form.collected_by.trim() || 'কোষাধ্যক্ষ',
-        notes: form.notes.trim()
+        source_location: form.source_location.trim(),
+        purpose: form.purpose.trim(),
+        payment_mode: form.payment_mode || 'নগদ'
       };
 
       onUpdateDB((prev) => ({
         ...prev,
-        bhogCoupons: [newCoupon, ...(prev.bhogCoupons || [])]
+        bhogCoupons: [newEntry, ...(prev.bhogCoupons || [])]
       }));
 
-      showToast(`কুপন আদায় সফল! রসিদ নং: ${newCoupon.coupon_no}`);
+      showToast(`কুপন আদায় সফল! ${formatTaka(amt)} যুক্ত হয়েছে`);
       setModalState(null);
     } else if (modalState.type === 'edit') {
-      const updatedCoupon = {
+      const updatedEntry = {
         ...modalState.coupon,
-        coupon_no: form.coupon_no.trim(),
-        donor_name: form.donor_name.trim(),
-        phone: form.phone.trim(),
-        coupon_count: Number(form.coupon_count) || 1,
-        rate: Number(form.rate) || 10,
+        date: form.date,
         amount: amt,
-        payment_mode: form.payment_mode,
-        payment_date: form.payment_date,
-        collected_by: form.collected_by.trim() || 'কোষাধ্যক্ষ',
-        notes: form.notes.trim()
+        source_location: form.source_location.trim(),
+        purpose: form.purpose.trim(),
+        payment_mode: form.payment_mode || 'নগদ'
       };
 
       onUpdateDB((prev) => ({
         ...prev,
         bhogCoupons: (prev.bhogCoupons || []).map((c) =>
-          c.id === modalState.coupon.id ? updatedCoupon : c
+          c.id === modalState.coupon.id ? updatedEntry : c
         )
       }));
 
-      showToast(`কুপন নং ${updatedCoupon.coupon_no} সফলভাবে আপডেট হয়েছে!`);
+      showToast('কুপন এন্ট্রি সফলভাবে পরিবর্তন হয়েছে!');
       setModalState(null);
     }
   };
@@ -218,7 +149,7 @@ export default function CouponsPage({ db, onUpdateDB, showToast }) {
       bhogCoupons: (prev.bhogCoupons || []).filter((c) => c.id !== target.id)
     }));
 
-    showToast(`কুপন নং ${target.coupon_no} মুছে ফেলা হয়েছে!`);
+    showToast('কুপন এন্ট্রি মুছে ফেলা হয়েছে!');
     setModalState(null);
   };
 
@@ -229,10 +160,10 @@ export default function CouponsPage({ db, onUpdateDB, showToast }) {
         <div>
           <h2 className="text-xl sm:text-2xl font-extrabold text-[#4A0E17] flex items-center gap-2">
             <Ticket className="text-[#800020]" />
-            <span>কুপন থেকে তোলা টাকা ও হিসাব</span>
+            <span>কুপন কালেকশন খাতা</span>
           </h2>
           <p className="text-xs sm:text-sm text-stone-500">
-            পূজা উপলক্ষে ১০ টাকা ও ২০ টাকার কুপন বিক্রি থেকে সংগৃহীত টাকার দৈনিক ও পূর্ণাঙ্গ হিসাব খাতা
+            তারিখ, কোথা থেকে তোলা হলো, কী উদ্দেশ্যে তোলা হলো এবং টাকার হিসাব
           </p>
         </div>
 
@@ -250,173 +181,111 @@ export default function CouponsPage({ db, onUpdateDB, showToast }) {
             className="px-4 py-2.5 rounded-xl bg-[#4A0E17] hover:bg-[#6b1421] text-amber-300 font-extrabold text-xs sm:text-sm transition flex items-center gap-1.5 shadow-md"
           >
             <Plus size={16} />
-            <span>+ নতুন কুপন আদায়</span>
+            <span>+ নতুন কুপন জমা</span>
           </button>
         </div>
       </div>
 
-      {/* KPI Stats Bar - 10 Tk & 20 Tk focused */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Collected */}
+      {/* KPI Stats Bar */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="p-4 rounded-2xl bg-gradient-to-br from-[#4A0E17] to-[#7B1113] text-white shadow-md relative overflow-hidden">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-amber-300 uppercase tracking-wider">মোট কুপন আদায়</span>
+            <span className="text-xs font-bold text-amber-300 uppercase tracking-wider">মোট সংগৃহীত টাকা</span>
             <div className="p-2 rounded-xl bg-white/10 text-amber-300">
               <Wallet size={20} />
             </div>
           </div>
-          <p className="text-2xl font-extrabold text-white">{formatTaka(totalCollected)}</p>
+          <p className="text-2xl font-extrabold text-white">{formatTaka(totalAmount)}</p>
           <p className="text-xs text-amber-200/80 mt-1">
-            মোট বিক্রীত কুপন: <span className="font-bold text-white">{toBnDigits(totalCount)}</span> টি ({toBnDigits(coupons.length)} এন্ট্রি)
+            সর্বমোট কুপন তহবিল
           </p>
         </div>
 
-        {/* 10 Taka Coupons */}
-        <div className="p-4 rounded-2xl bg-[#FFFDF7] border-2 border-amber-300 shadow-sm relative">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-amber-900 uppercase">১০ টাকার কুপন আদায়</span>
-            <span className="px-2 py-0.5 rounded-full text-xs font-extrabold bg-amber-100 text-amber-800 border border-amber-300">
-              ₹১০
-            </span>
-          </div>
-          <p className="text-2xl font-extrabold text-amber-900">{formatTaka(amt10)}</p>
-          <p className="text-xs text-stone-500 mt-1">
-            বিক্রি হয়েছে: <span className="font-bold text-amber-900">{toBnDigits(count10)}</span> টি কুপন
-          </p>
-        </div>
-
-        {/* 20 Taka Coupons */}
-        <div className="p-4 rounded-2xl bg-[#FFFDF7] border-2 border-emerald-300 shadow-sm relative">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-emerald-900 uppercase">২০ টাকার কুপন আদায়</span>
-            <span className="px-2 py-0.5 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">
-              ₹২০
-            </span>
-          </div>
-          <p className="text-2xl font-extrabold text-emerald-900">{formatTaka(amt20)}</p>
-          <p className="text-xs text-stone-500 mt-1">
-            বিক্রি হয়েছে: <span className="font-bold text-emerald-900">{toBnDigits(count20)}</span> টি কুপন
-          </p>
-        </div>
-
-        {/* Mode Split */}
         <div className="p-4 rounded-2xl bg-[#FFFDF7] border border-[#EADBB6] shadow-sm">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-stone-500 uppercase">নগদ / UPI মাধ্যম</span>
-            <div className="p-2 rounded-xl bg-stone-100 text-stone-700">
-              <Coins size={18} />
+            <span className="text-xs font-bold text-stone-500 uppercase">মোট কালেকশন এন্ট্রি</span>
+            <div className="p-2 rounded-xl bg-amber-100 text-amber-800">
+              <Ticket size={20} />
             </div>
           </div>
-          <div className="space-y-1 mt-1">
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-stone-600 font-medium">নগদ আদায়:</span>
-              <span className="font-extrabold text-stone-900">{formatTaka(cashTotal)}</span>
-            </div>
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-stone-600 font-medium">অনলাইন / UPI:</span>
-              <span className="font-extrabold text-[#800020]">{formatTaka(upiTotal)}</span>
+          <p className="text-2xl font-extrabold text-stone-900">{toBnDigits(coupons.length)} <span className="text-sm font-semibold text-stone-500">বার</span></p>
+          <p className="text-xs text-stone-500 mt-1">
+            মোট জমার সংখ্যা
+          </p>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-[#FFFDF7] border border-[#EADBB6] shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-stone-500 uppercase">আজকের কালেকশন</span>
+            <div className="p-2 rounded-xl bg-emerald-100 text-emerald-800">
+              <Clock size={20} />
             </div>
           </div>
+          <p className="text-2xl font-extrabold text-emerald-800">{formatTaka(todayAmount)}</p>
+          <p className="text-xs text-stone-500 mt-1">
+            আজকে আদায় হওয়া টাকা
+          </p>
         </div>
       </div>
 
-      {/* Search & Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" size={17} />
-          <input
-            type="text"
-            placeholder="কুপন নম্বর, দাতার নাম, ফোন বা সংগ্রাহকের নাম দিয়ে খুঁজুন..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-200 bg-white text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#800020]"
-          />
-        </div>
-
-        <div className="flex items-center gap-1.5 bg-[#FFFDF7] p-1 rounded-xl border border-stone-200 shrink-0 overflow-x-auto">
-          {['সব', '₹10 কুপন', '₹20 কুপন', 'নগদ', 'UPI'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setFilterTab(tab)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
-                filterTab === tab ? 'bg-[#4A0E17] text-amber-300 shadow-xs' : 'text-stone-600 hover:text-stone-900'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
+      {/* Search Input */}
+      <div className="relative">
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" size={17} />
+        <input
+          type="text"
+          placeholder="কোথা থেকে তোলা হলো, কী উদ্দেশ্যে বা তারিখ দিয়ে খুঁজুন..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-200 bg-white text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#800020]"
+        />
       </div>
 
       {/* Coupons Table */}
       <div className="bg-[#FFFDF7] rounded-2xl border border-[#EADBB6] shadow-sm overflow-hidden">
         {filteredCoupons.length === 0 ? (
           <div className="p-12 text-center text-stone-500 text-sm">
-            {search || filterTab !== 'সব' 
-              ? 'আপনার ফিল্টারে কোনো কুপন এন্ট্রি পাওয়া যায়নি।' 
-              : 'এখনো কোনো কুপন আদায়ের হিসাব পাওয়া যায়নি। উপরে "+ নতুন কুপন আদায়" বাটনে ক্লিক করে প্রথম এন্ট্রি দিন।'}
+            {search 
+              ? 'আপনার অনুসন্ধানে কোনো কুপন এন্ট্রি পাওয়া যায়নি।' 
+              : 'এখনো কোনো কুপন আদায়ের হিসাব পাওয়া যায়নি। উপরে "+ নতুন কুপন জমা" বাটনে ক্লিক করে প্রথম এন্ট্রি দিন।'}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs sm:text-sm">
               <thead className="bg-[#F7EED3]/70 text-[#4A0E17] font-bold border-b border-[#EADBB6]">
                 <tr>
-                  <th className="py-3 px-4">কুপন / বই নং</th>
-                  <th className="py-3 px-4">ক্রেতা / দাতার নাম</th>
-                  <th className="py-3 px-4">কুপনের ধরন</th>
-                  <th className="py-3 px-4">সংখ্যা</th>
-                  <th className="py-3 px-4">মোট আদায় (₹)</th>
+                  <th className="py-3 px-4">ক্রমিক</th>
                   <th className="py-3 px-4">তারিখ</th>
+                  <th className="py-3 px-4">কোথা থেকে তোলা হলো</th>
+                  <th className="py-3 px-4">কী উদ্দেশ্যে তোলা হলো</th>
+                  <th className="py-3 px-4">কত টাকা উঠল (₹)</th>
                   <th className="py-3 px-4">মাধ্যম</th>
-                  <th className="py-3 px-4">আদায়কারী</th>
                   <th className="py-3 px-4 text-right">একশন</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
-                {filteredCoupons.map((c) => {
-                  const rateVal = Number(c.rate) || 10;
-                  const is10 = rateVal === 10;
-                  const is20 = rateVal === 20;
-                  const waUrl = getWhatsAppCouponUrl(c.phone, c, db.settings?.club_name || 'প্রগতি সংঘ');
-
+                {filteredCoupons.map((c, index) => {
                   return (
                     <tr key={c.id} className="hover:bg-[#FDF8EA]/60 transition">
-                      <td className="py-3 px-4 font-mono font-bold text-[#800020]">
-                        {c.coupon_no || '-'}
+                      <td className="py-3 px-4 font-mono text-stone-500">
+                        {toBnDigits(index + 1)}
+                      </td>
+                      <td className="py-3 px-4 font-semibold text-stone-800 whitespace-nowrap">
+                        {formatBnDate(c.date || c.payment_date)}
                       </td>
                       <td className="py-3 px-4 font-bold text-stone-900">
-                        {c.donor_name}
-                        {c.notes && (
-                          <span className="block text-[11px] text-stone-400 font-normal">
-                            {c.notes}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1.5">
+                          <MapPin size={14} className="text-[#800020] shrink-0" />
+                          <span>{c.source_location || c.donor_name || '-'}</span>
+                        </div>
                       </td>
-                      <td className="py-3 px-4">
-                        {is10 && (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-amber-50 text-amber-900 border border-amber-300">
-                            🎟️ ₹10 কুপন
-                          </span>
-                        )}
-                        {is20 && (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-900 border border-emerald-300">
-                            🎟️ ₹20 কুপন
-                          </span>
-                        )}
-                        {!is10 && !is20 && (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-stone-100 text-stone-700 border border-stone-200">
-                            ₹{toBnDigits(rateVal)}
-                          </span>
-                        )}
+                      <td className="py-3 px-4 font-medium text-stone-700">
+                        <div className="flex items-center gap-1.5">
+                          <Target size={14} className="text-amber-700 shrink-0" />
+                          <span>{c.purpose || '-'}</span>
+                        </div>
                       </td>
-                      <td className="py-3 px-4 font-bold text-stone-800">
-                        {toBnDigits(c.coupon_count || 1)} <span className="text-xs font-normal text-stone-500">টি</span>
-                      </td>
-                      <td className="py-3 px-4 font-extrabold text-emerald-700 text-sm">
+                      <td className="py-3 px-4 font-extrabold text-emerald-800 text-base">
                         {formatTaka(c.amount)}
-                      </td>
-                      <td className="py-3 px-4 text-stone-600">
-                        {formatBnDate(c.payment_date)}
                       </td>
                       <td className="py-3 px-4">
                         <span className={`px-2.5 py-0.5 rounded-full font-semibold text-xs border ${
@@ -427,40 +296,24 @@ export default function CouponsPage({ db, onUpdateDB, showToast }) {
                           {c.payment_mode || 'নগদ'}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-stone-700 font-medium">
-                        {c.collected_by || '-'}
-                      </td>
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {c.phone && (
-                            <a
-                              href={waUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold transition shadow-xs"
-                              title="WhatsApp-এ কুপন প্রাপ্তি স্বীকার পাঠান"
-                            >
-                              <Share2 size={13} />
-                              <span className="hidden sm:inline">WhatsApp</span>
-                            </a>
-                          )}
-
                           <button
                             onClick={() => handleOpenEdit(c)}
                             className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-bold transition shadow-xs"
-                            title="কুপন তথ্য এডিট করুন"
+                            title="এডিট করুন"
                           >
                             <Edit3 size={13} />
-                            <span className="hidden sm:inline">এডিট</span>
+                            <span>এডিট</span>
                           </button>
 
                           <button
                             onClick={() => setModalState({ type: 'delete', coupon: c })}
                             className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition shadow-xs"
-                            title="কুপন এন্ট্রি ডিলিট করুন"
+                            title="মুছে ফেলুন"
                           >
                             <Trash2 size={13} />
-                            <span className="hidden sm:inline">ডিলিট</span>
+                            <span>ডিলিট</span>
                           </button>
                         </div>
                       </td>
@@ -473,197 +326,128 @@ export default function CouponsPage({ db, onUpdateDB, showToast }) {
         )}
       </div>
 
-      {/* Add / Edit Modal */}
+      {/* Simple Add / Edit Modal (Only the 4 fields requested) */}
       {(modalState?.type === 'add' || modalState?.type === 'edit') && (
         <Modal
-          title={modalState.type === 'add' ? 'নতুন কুপন আদায় অন্তর্ভুক্তি' : `কুপন এডিট (${modalState.coupon?.coupon_no})`}
+          title={modalState.type === 'add' ? 'নতুন কুপন আদায় অন্তর্ভুক্তি' : 'কুপন হিসাব পরিবর্তন (এডিট)'}
           onClose={() => setModalState(null)}
         >
           <form onSubmit={handleSave} className="space-y-4 text-xs sm:text-sm">
-            {/* Coupon Denomination (10 Tk vs 20 Tk) Selection */}
+            {/* 1. Date */}
             <div>
-              <label className="block font-bold text-stone-800 mb-1.5">
-                কুপনের মূল্য নির্বাচন করুন *
+              <label className="block font-bold text-stone-700 mb-1 flex items-center gap-1">
+                <Calendar size={14} className="text-[#800020]" />
+                <span>তারিখ *</span>
               </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => handleSelectRate(10)}
-                  className={`p-3 rounded-xl border-2 font-bold transition flex items-center justify-center gap-2 ${
-                    Number(form.rate) === 10
-                      ? 'border-[#800020] bg-[#4A0E17] text-amber-300 shadow-md ring-2 ring-amber-300/40'
-                      : 'border-stone-200 bg-white text-stone-700 hover:border-amber-300 hover:bg-amber-50/50'
-                  }`}
-                >
-                  <Ticket size={18} />
-                  <div className="text-left">
-                    <div className="text-sm font-extrabold">₹১০ কুপন</div>
-                    <div className="text-[10px] opacity-80">দশ টাকার কুপন</div>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSelectRate(20)}
-                  className={`p-3 rounded-xl border-2 font-bold transition flex items-center justify-center gap-2 ${
-                    Number(form.rate) === 20
-                      ? 'border-[#800020] bg-[#4A0E17] text-amber-300 shadow-md ring-2 ring-emerald-300/40'
-                      : 'border-stone-200 bg-white text-stone-700 hover:border-emerald-300 hover:bg-emerald-50/50'
-                  }`}
-                >
-                  <Ticket size={18} />
-                  <div className="text-left">
-                    <div className="text-sm font-extrabold">₹২০ কুপন</div>
-                    <div className="text-[10px] opacity-80">কুড়ি টাকার কুপন</div>
-                  </div>
-                </button>
-              </div>
+              <input
+                type="date"
+                required
+                value={form.date}
+                onChange={(e) => setForm(prev => ({ ...prev, date: e.target.value }))}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white font-semibold focus:ring-2 focus:ring-[#800020]"
+              />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block font-bold text-stone-700 mb-1">কুপন / বই নম্বর *</label>
-                <input
-                  type="text"
-                  required
-                  value={form.coupon_no}
-                  onChange={(e) => setForm(prev => ({ ...prev, coupon_no: e.target.value }))}
-                  placeholder="যেমন: CPN-001 বা বই নং ২"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white font-mono font-bold text-[#800020] focus:ring-2 focus:ring-[#800020]"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-stone-700 mb-1">ক্রেতা / দাতার নাম *</label>
-                <input
-                  type="text"
-                  required
-                  value={form.donor_name}
-                  onChange={(e) => setForm(prev => ({ ...prev, donor_name: e.target.value }))}
-                  placeholder="যেমন: শ্রী অনিল দাস / ভক্ত"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white font-semibold focus:ring-2 focus:ring-[#800020]"
-                />
-              </div>
-            </div>
-
-            {/* Quick Count Selector */}
+            {/* 2. Amount */}
             <div>
-              <label className="block font-bold text-stone-700 mb-1">কুপন সংখ্যা (ক'টি কুপন দেওয়া হয়েছে) *</label>
-              <div className="flex items-center gap-2 mb-2">
-                <input
-                  type="number"
-                  min="1"
-                  required
-                  value={form.coupon_count}
-                  onChange={(e) => handleCountChange(e.target.value)}
-                  className="w-32 px-3.5 py-2 rounded-xl border border-stone-300 bg-white font-bold text-base focus:ring-2 focus:ring-[#800020]"
-                />
-                <span className="text-xs text-stone-500 font-semibold">টি</span>
-
-                <div className="flex items-center gap-1.5 overflow-x-auto ml-2">
-                  {[1, 2, 5, 10, 20, 50].map(qty => (
-                    <button
-                      key={qty}
-                      type="button"
-                      onClick={() => handleCountChange(qty)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${
-                        Number(form.coupon_count) === qty
-                          ? 'bg-[#4A0E17] text-white border-[#4A0E17]'
-                          : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border-stone-200'
-                      }`}
-                    >
-                      {qty}টি
-                    </button>
-                  ))}
-                </div>
+              <label className="block font-bold text-stone-700 mb-1 flex items-center gap-1">
+                <Wallet size={14} className="text-emerald-700" />
+                <span>কত টাকা উঠল (₹) *</span>
+              </label>
+              <input
+                type="number"
+                min="1"
+                required
+                placeholder="যেমন: 500, 1000, 2500"
+                value={form.amount}
+                onChange={(e) => setForm(prev => ({ ...prev, amount: e.target.value }))}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white font-bold text-emerald-800 text-base focus:ring-2 focus:ring-[#800020]"
+              />
+              {/* Quick amount chips */}
+              <div className="flex items-center gap-1.5 mt-2 overflow-x-auto">
+                <span className="text-[11px] text-stone-500 font-semibold">শর্টকাট:</span>
+                {[100, 200, 500, 1000, 2000, 5000].map(amt => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => setForm(prev => ({ ...prev, amount: (Number(prev.amount) || 0) + amt }))}
+                    className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold transition whitespace-nowrap"
+                  >
+                    +₹{amt}
+                  </button>
+                ))}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block font-bold text-stone-700 mb-1">প্রতিটির দর (₹)</label>
-                <input
-                  type="number"
-                  min="1"
-                  required
-                  value={form.rate}
-                  onChange={(e) => {
-                    const r = Number(e.target.value) || 0;
-                    handleSelectRate(r);
-                  }}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-stone-50 font-bold focus:ring-2 focus:ring-[#800020]"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-stone-700 mb-1">মোট আদায় (₹) [স্বয়ংক্রিয়]</label>
-                <div className="px-3.5 py-2.5 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-800 font-extrabold text-base flex items-center justify-between">
-                  <span>{formatTaka(form.amount)}</span>
-                  <span className="text-xs font-normal text-emerald-600">
-                    ({form.coupon_count} টি × ₹{form.rate})
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block font-bold text-stone-700 mb-1">মোবাইল নম্বর (ঐচ্ছিক)</label>
-                <input
-                  type="tel"
-                  value={form.phone}
-                  onChange={(e) => setForm(prev => ({ ...prev, phone: e.target.value }))}
-                  placeholder="যেমন: 9876543210"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white focus:ring-2 focus:ring-[#800020]"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-stone-700 mb-1">পেমেন্ট মাধ্যম</label>
-                <select
-                  value={form.payment_mode}
-                  onChange={(e) => setForm(prev => ({ ...prev, payment_mode: e.target.value }))}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white font-semibold focus:ring-2 focus:ring-[#800020]"
-                >
-                  <option value="নগদ">নগদ (Cash)</option>
-                  <option value="UPI">UPI / অনলাইন</option>
-                  <option value="অন্যান্য">অন্যান্য</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-bold text-stone-700 mb-1">জমার তারিখ</label>
-                <input
-                  type="date"
-                  value={form.payment_date}
-                  onChange={(e) => setForm(prev => ({ ...prev, payment_date: e.target.value }))}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white focus:ring-2 focus:ring-[#800020]"
-                />
+            {/* 3. Source Location */}
+            <div>
+              <label className="block font-bold text-stone-700 mb-1 flex items-center gap-1">
+                <MapPin size={14} className="text-[#800020]" />
+                <span>কোথা থেকে তোলা হলো *</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="যেমন: মণ্ডপ প্রাঙ্গণ, হরিসভা মোড়, ভোগ কাউন্টার..."
+                value={form.source_location}
+                onChange={(e) => setForm(prev => ({ ...prev, source_location: e.target.value }))}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white font-semibold focus:ring-2 focus:ring-[#800020]"
+              />
+              {/* Quick location chips */}
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {['মণ্ডপ প্রাঙ্গণ', 'হরিসভা মোড়', 'ভোগ কাউন্টার', 'বাজার প্রাঙ্গণ', 'পাড়ার মোড়'].map(loc => (
+                  <button
+                    key={loc}
+                    type="button"
+                    onClick={() => setForm(prev => ({ ...prev, source_location: loc }))}
+                    className="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-200 text-xs font-medium transition"
+                  >
+                    {loc}
+                  </button>
+                ))}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block font-bold text-stone-700 mb-1">আদায়কারী সদস্য</label>
-                <input
-                  type="text"
-                  value={form.collected_by}
-                  onChange={(e) => setForm(prev => ({ ...prev, collected_by: e.target.value }))}
-                  placeholder="যেমন: কোষাধ্যক্ষ / শ্যামল দাস"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white focus:ring-2 focus:ring-[#800020]"
-                />
+            {/* 4. Purpose */}
+            <div>
+              <label className="block font-bold text-stone-700 mb-1 flex items-center gap-1">
+                <Target size={14} className="text-amber-700" />
+                <span>কী উদ্দেশ্যে তোলা হলো *</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="যেমন: ভোগ প্রসাদ বিতরণ, পূজা মণ্ডপ কুপন, বিশেষ চাঁদা..."
+                value={form.purpose}
+                onChange={(e) => setForm(prev => ({ ...prev, purpose: e.target.value }))}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white font-semibold focus:ring-2 focus:ring-[#800020]"
+              />
+              {/* Quick purpose chips */}
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {['ভোগ প্রসাদ বিতরণ', 'পূজা মণ্ডপ কুপন', 'শ্যামা পূজা চাঁদা কুপন', 'বিশেষ প্রসাদ কুপন'].map(pur => (
+                  <button
+                    key={pur}
+                    type="button"
+                    onClick={() => setForm(prev => ({ ...prev, purpose: pur }))}
+                    className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-medium transition"
+                  >
+                    {pur}
+                  </button>
+                ))}
               </div>
+            </div>
 
-              <div>
-                <label className="block font-bold text-stone-700 mb-1">মন্তব্য (ঐচ্ছিক)</label>
-                <input
-                  type="text"
-                  value={form.notes}
-                  onChange={(e) => setForm(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="কোনো অতিরিক্ত বিবরণ..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white focus:ring-2 focus:ring-[#800020]"
-                />
-              </div>
+            {/* Payment Mode */}
+            <div>
+              <label className="block font-bold text-stone-700 mb-1">পেমেন্ট মাধ্যম</label>
+              <select
+                value={form.payment_mode}
+                onChange={(e) => setForm(prev => ({ ...prev, payment_mode: e.target.value }))}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white font-semibold focus:ring-2 focus:ring-[#800020]"
+              >
+                <option value="নগদ">নগদ (Cash)</option>
+                <option value="UPI">UPI / অনলাইন</option>
+              </select>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-3 border-t">
@@ -697,31 +481,31 @@ export default function CouponsPage({ db, onUpdateDB, showToast }) {
               <AlertTriangle className="text-amber-600 shrink-0 mt-0.5" size={18} />
               <div>
                 <span className="font-bold block">সতর্কতা:</span>
-                এই কুপন এন্ট্রিটি ডিলিট করলে কুপন খাতা ও মোট তহবিল থেকে <strong>{formatTaka(modalState.coupon.amount)}</strong> টাকা স্বয়ংক্রিয়ভাবে বাদ যাবে।
+                এই কুপন এন্ট্রিটি ডিলিট করলে মোট তহবিল থেকে <strong>{formatTaka(modalState.coupon.amount)}</strong> টাকা বাদ যাবে।
               </div>
             </div>
 
             <div className="bg-[#F7EED3]/50 p-4 rounded-xl border border-[#EADBB6] space-y-2 text-xs sm:text-sm">
               <div className="flex justify-between">
-                <span className="text-stone-500">কুপন নম্বর:</span>
-                <span className="font-mono font-bold text-[#800020]">{modalState.coupon.coupon_no}</span>
+                <span className="text-stone-500">তারিখ:</span>
+                <span className="font-semibold text-stone-800">{formatBnDate(modalState.coupon.date || modalState.coupon.payment_date)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-stone-500">ক্রেতা / দাতার নাম:</span>
-                <span className="font-bold text-stone-900">{modalState.coupon.donor_name}</span>
+                <span className="text-stone-500">কোথা থেকে তোলা হলো:</span>
+                <span className="font-bold text-stone-900">{modalState.coupon.source_location || modalState.coupon.donor_name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-stone-500">কুপন দর ও সংখ্যা:</span>
-                <span className="font-semibold text-stone-800">₹{modalState.coupon.rate || 10} × {modalState.coupon.coupon_count} টি</span>
+                <span className="text-stone-500">কী উদ্দেশ্যে:</span>
+                <span className="font-medium text-stone-800">{modalState.coupon.purpose}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-stone-500">মোট আদায়:</span>
-                <span className="font-extrabold text-emerald-700">{formatTaka(modalState.coupon.amount)}</span>
+                <span className="text-stone-500">টাকার পরিমাণ:</span>
+                <span className="font-extrabold text-emerald-800">{formatTaka(modalState.coupon.amount)}</span>
               </div>
             </div>
 
             <p className="text-xs text-stone-600 font-medium">
-              আপনি কি নিশ্চিত যে আপনি এই কুপন এন্ট্রিটি সম্পূর্ণ মুছে ফেলতে চান?
+              আপনি কি নিশ্চিত যে এই কুপন হিসাবটি সম্পূর্ণ মুছে ফেলতে চান?
             </p>
 
             <div className="flex items-center justify-end gap-2 pt-2">
