@@ -79,6 +79,17 @@ export default function App() {
         setDb(cloudData);
         saveLocalDB(cloudData);
         setIsCloudConnected(true);
+
+        // Auto Self-Heal: if any member balance differs from cloud raw records, quietly sync back
+        if (Array.isArray(cloudData._rawMembers) && cloudData._rawMembers.length > 0) {
+          const diffMembers = cloudData.members.filter(m => {
+            const raw = cloudData._rawMembers.find(rm => rm.id === m.id);
+            return raw && (raw.collected_amount !== m.collected_amount || raw.status !== m.status || raw.last_payment_date !== m.last_payment_date);
+          });
+          if (diffMembers.length > 0) {
+            safeUpsertMembers(supabase, diffMembers);
+          }
+        }
       }
     } catch (err) {
       console.warn('Supabase fetch failed, continuing with local cache:', err);
@@ -248,11 +259,23 @@ export default function App() {
             }
 
             if (next.members !== prev.members && next.members?.length) {
-              await safeUpsertMembers(supabase, next.members);
+              const changedMembers = next.members.filter(nm => {
+                const pm = (prev.members || []).find(m => m.id === nm.id);
+                return !pm || JSON.stringify(pm) !== JSON.stringify(nm);
+              });
+              if (changedMembers.length > 0) {
+                await safeUpsertMembers(supabase, changedMembers);
+              }
             }
 
             if (next.payments !== prev.payments && next.payments?.length) {
-              await supabase.from('payments').upsert(next.payments);
+              const changedPayments = next.payments.filter(np => {
+                const pp = (prev.payments || []).find(p => p.id === np.id);
+                return !pp || JSON.stringify(pp) !== JSON.stringify(np);
+              });
+              if (changedPayments.length > 0) {
+                await supabase.from('payments').upsert(changedPayments);
+              }
             }
 
             if (next.marketEntries !== prev.marketEntries && next.marketEntries?.length) {
