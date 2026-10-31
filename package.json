@@ -4,7 +4,7 @@
   "version": "2.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node -e \"const fs=require('fs'); if(fs.existsSync('index.source.html')) fs.copyFileSync('index.source.html', 'index.html');\" && vite",
     "build": "node scripts/build.js",
     "preview": "vite preview"
   },
