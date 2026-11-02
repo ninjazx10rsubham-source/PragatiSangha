@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, ArrowRight, X } from 'lucide-react';
-import { MAA_SHYAMA_IMG } from '../assets/maaShyamaImage';
+import { MAA_SHYAMA_DORSON_IMG } from '../assets/maaShyamaFullBg';
 
 export default function WelcomeSplash({ onComplete, clubName = 'প্রগতি সংঘ', eventName = 'শ্রী শ্রী শ্যামা পূজা ২০২৬' }) {
   const [isVisible, setIsVisible] = useState(true);
@@ -64,14 +64,14 @@ export default function WelcomeSplash({ onComplete, clubName = 'প্রগত�
         {/* Divine Image Container with Multi-layer Glow & Sacred Aura */}
         <div className="relative mb-6 group cursor-pointer" onClick={handleClose}>
           {/* Pulsating Golden/Crimson Aura Rings */}
-          <div className="absolute -inset-3 rounded-full bg-gradient-to-tr from-amber-500 via-rose-600 to-amber-300 opacity-60 blur-lg animate-pulse"></div>
-          <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-amber-400 to-amber-200 opacity-80 blur-xs"></div>
+          <div className="absolute -inset-3 rounded-3xl bg-gradient-to-tr from-amber-500 via-rose-600 to-amber-300 opacity-60 blur-lg animate-pulse"></div>
+          <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-amber-400 to-amber-200 opacity-80 blur-xs"></div>
           
           {/* Maa Shyama Photo */}
-          <div className="relative w-36 h-36 sm:w-44 sm:h-44 rounded-full overflow-hidden border-4 border-amber-300 shadow-[0_0_40px_rgba(251,191,36,0.6)]">
+          <div className="relative w-64 h-40 sm:w-80 sm:h-48 rounded-3xl overflow-hidden border-4 border-amber-300 shadow-[0_0_45px_rgba(251,191,36,0.7)] bg-black/60">
             <img
-              src={MAA_SHYAMA_IMG}
-              alt="মা শ্যামা"
+              src={MAA_SHYAMA_DORSON_IMG}
+              alt="মা শ্যামা দর্শন"
               className="w-full h-full object-cover transform hover:scale-105 transition duration-700"
             />
           </div>
