@@ -75,3 +75,15 @@ export function numberToBengaliWords(num) {
 
   return words.trim() + ' টাকা মাত্র';
 }
+
+export function getBnDayName(dateStr) {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '';
+    const days = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'];
+    return days[d.getDay()] || '';
+  } catch {
+    return '';
+  }
+}

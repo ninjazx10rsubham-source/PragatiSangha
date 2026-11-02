@@ -1,3 +1,4 @@
+import DailyCollectionSection from '../components/DailyCollectionSection';
 import React, { useState, useMemo } from 'react';
 import { 
   Receipt, 
@@ -218,61 +219,12 @@ export default function PaymentsPage({ db, onUpdateDB, showToast, onOpenReceipt 
         </div>
       </div>
 
-      {/* Daily Collection Date-by-Date Summary Box */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-[#FFFDF7] border border-[#EADBB6] shadow-sm space-y-3">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2 text-[#4A0E17] font-bold text-sm sm:text-base">
-            <Calendar size={18} className="text-[#800020]" />
-            <span>তারিখ অনুযায়ী মোট সংগৃহীত চাঁদা (দিনভিত্তিক কালেকশন)</span>
-          </div>
-          {selectedDate !== 'সব' && (
-            <button
-              onClick={() => setSelectedDate('সব')}
-              className="text-xs text-[#800020] hover:underline font-bold px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-200"
-            >
-              ✕ সব তারিখের তালিকা দেখুন
-            </button>
-          )}
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-          <button
-            onClick={() => setSelectedDate('সব')}
-            className={`p-3 rounded-xl border text-left transition ${
-              selectedDate === 'সব'
-                ? 'bg-[#4A0E17] text-white border-[#4A0E17] shadow-sm'
-                : 'bg-white text-stone-700 border-stone-200 hover:border-[#800020] hover:bg-amber-50/50'
-            }`}
-          >
-            <div className="text-[11px] font-bold opacity-80">সব তারিখ মোট</div>
-            <div className="text-sm sm:text-base font-extrabold mt-0.5">{formatTaka(payments.reduce((s, p) => s + (Number(p.amount) || 0), 0))}</div>
-            <div className="text-[10px] opacity-75 mt-0.5">{toBnDigits(payments.length)} টি রসিদ</div>
-          </button>
-
-          {dailyBreakdown.map((item) => {
-            const isSelected = selectedDate === item.date;
-            return (
-              <button
-                key={item.date}
-                onClick={() => setSelectedDate(isSelected ? 'সব' : item.date)}
-                className={`p-3 rounded-xl border text-left transition ${
-                  isSelected
-                    ? 'bg-[#800020] text-white border-[#800020] ring-2 ring-[#800020]/30 shadow-sm'
-                    : 'bg-white text-stone-700 border-stone-200 hover:border-[#800020] hover:bg-amber-50/50'
-                }`}
-              >
-                <div className="text-[11px] font-bold truncate">
-                  📅 {formatBnDate(item.date)}
-                </div>
-                <div className="text-sm sm:text-base font-extrabold mt-0.5" style={{ color: isSelected ? '#fff' : '#4A0E17' }}>
-                  {formatTaka(item.total)}
-                </div>
-                <div className="text-[10px] opacity-75 mt-0.5">{toBnDigits(item.count)} টি রসিদ</div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      {/* Dedicated Section for Day-by-Day Total Sum */}
+      <DailyCollectionSection 
+        payments={payments}
+        selectedDate={selectedDate}
+        onSelectDate={setSelectedDate}
+      />
 
       {/* Search & Mode Filters */}
       <div className="flex flex-col sm:flex-row gap-3">

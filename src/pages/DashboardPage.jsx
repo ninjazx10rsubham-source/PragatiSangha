@@ -1,3 +1,4 @@
+import DailyCollectionSection from '../components/DailyCollectionSection';
 import React from 'react';
 import { 
   Users, 
@@ -215,6 +216,9 @@ export default function DashboardPage({ db, onNavigate, onOpenReceipt }) {
           </div>
         </div>
       </div>
+
+      {/* Dedicated Section for Day-by-Day Total Sum */}
+      <DailyCollectionSection payments={db.payments || []} />
 
       {/* Recent Payments Table */}
       <div className="p-5 rounded-2xl bg-[#FFFDF7] border border-[#EADBB6] shadow-sm">
