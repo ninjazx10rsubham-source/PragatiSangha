@@ -35,7 +35,7 @@ import Modal from '../components/Modal';
 import { formatTaka, toBnDigits } from '../utils/formatters';
 import { exportMembersToExcel, exportPreviousYearMembersToExcel, getWhatsAppDueReminderUrl } from '../services/exportService';
 import { deleteMemberFromSupabase, deletePreviousYearMemberFromSupabase, defaultPreviousYearMembers, getNextReceiptNo } from '../services/dataService';
-import { getMemberBillNo, encodeMemberBillNo } from '../utils/billHelper';
+import { getMemberBillNo, encodeMemberBillNo, matchMemberBillNo } from '../utils/billHelper';
 
 export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }) {
   const [activeMainTab, setActiveMainTab] = useState('current'); // Show current members where all 205 members are listed!
@@ -137,11 +137,13 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
   const filteredMembers = useMemo(() => {
     return members.filter((m) => {
       if (m.visible === false) return false;
+      const s = search.toLowerCase();
       const matchesSearch = 
         !search ||
-        m.name.toLowerCase().includes(search.toLowerCase()) ||
-        (m.address && m.address.toLowerCase().includes(search.toLowerCase())) ||
-        (m.phone && m.phone.includes(search));
+        m.name.toLowerCase().includes(s) ||
+        (m.address && m.address.toLowerCase().includes(s)) ||
+        (m.phone && m.phone.includes(search)) ||
+        matchMemberBillNo(m, search);
       
       const matchesStatus = statusFilter === 'সবাই' || m.status === statusFilter;
 
@@ -602,7 +604,7 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" size={17} />
               <input
                 type="text"
-                placeholder="নাম, বাড়ি নম্বর বা মোবাইল দিয়ে খুঁজুন..."
+                placeholder="নাম, বিল নং (#12), বাড়ি নম্বর বা মোবাইল দিয়ে খুঁজুন..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-200 bg-white text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#800020]"

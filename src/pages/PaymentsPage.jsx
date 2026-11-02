@@ -18,6 +18,7 @@ import Modal from '../components/Modal';
 import { formatTaka, toBnDigits, formatBnDate } from '../utils/formatters';
 import { exportToExcel, getWhatsAppReceiptUrl } from '../services/exportService';
 import { reconcileMemberBalances } from '../services/dataService';
+import { getMemberBillNo, matchMemberBillNo } from '../utils/billHelper';
 
 export default function PaymentsPage({ db, onUpdateDB, showToast, onOpenReceipt }) {
   const [search, setSearch] = useState('');
@@ -41,16 +42,22 @@ export default function PaymentsPage({ db, onUpdateDB, showToast, onOpenReceipt 
 
   const filteredPayments = useMemo(() => {
     return payments.filter((p) => {
+      const member = members.find(m => m.id === p.member_id || m.name === p.member_name);
+      const matchesBill = member ? matchMemberBillNo(member, search) : false;
+      const cleanSearch = search.replace(/^#/, '').trim().toLowerCase();
+
       const matchSearch =
         !search ||
         p.receipt_no.toLowerCase().includes(search.toLowerCase()) ||
+        p.receipt_no.toLowerCase().includes(cleanSearch) ||
         p.member_name.toLowerCase().includes(search.toLowerCase()) ||
-        (p.collected_by && p.collected_by.toLowerCase().includes(search.toLowerCase()));
+        (p.collected_by && p.collected_by.toLowerCase().includes(search.toLowerCase())) ||
+        matchesBill;
 
       const matchMode = modeFilter === 'সব' || p.payment_mode === modeFilter;
       return matchSearch && matchMode;
     });
-  }, [payments, search, modeFilter]);
+  }, [payments, search, modeFilter, members]);
 
   const totalCollected = filteredPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
@@ -200,7 +207,7 @@ export default function PaymentsPage({ db, onUpdateDB, showToast, onOpenReceipt 
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" size={17} />
           <input
             type="text"
-            placeholder="রসিদ নং বা দাতার নাম দিয়ে খুঁজুন..."
+            placeholder="রসিদ নং, বিল নং (#12) বা দাতার নাম দিয়ে খুঁজুন..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-200 bg-white text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#800020]"
@@ -253,7 +260,12 @@ export default function PaymentsPage({ db, onUpdateDB, showToast, onOpenReceipt 
                         {p.receipt_no}
                       </td>
                       <td className="py-3 px-4 font-bold text-stone-900">
-                        {p.member_name}
+                        <div>{p.member_name}</div>
+                        {member && getMemberBillNo(member) && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-[#800020] bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 mt-0.5">
+                            বিল নং: #{getMemberBillNo(member)}
+                          </span>
+                        )}
                       </td>
                       <td className="py-3 px-4 font-extrabold text-emerald-700">
                         {formatTaka(p.amount)}

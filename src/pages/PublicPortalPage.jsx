@@ -43,10 +43,12 @@ export default function PublicPortalPage({ db, onUpdateDB, showToast, onOpenRece
 
   const searchResults = useMemo(() => {
     if (!search.trim()) return [];
+    const s = search.toLowerCase();
     return members.filter((m) =>
-      m.name.toLowerCase().includes(search.toLowerCase()) ||
-      (m.address && m.address.toLowerCase().includes(search.toLowerCase())) ||
-      (m.phone && m.phone.includes(search))
+      m.name.toLowerCase().includes(s) ||
+      (m.address && m.address.toLowerCase().includes(s)) ||
+      (m.phone && m.phone.includes(search)) ||
+      matchMemberBillNo(m, search)
     );
   }, [members, search]);
 
@@ -359,7 +361,7 @@ export default function PublicPortalPage({ db, onUpdateDB, showToast, onOpenRece
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" size={18} />
           <input
             type="text"
-            placeholder="আপনার নাম বা বাড়ি নম্বর লিখুন (যেমন: ১২/এ)..."
+            placeholder="আপনার নাম, বিল নং (#12) বা বাড়ি নম্বর লিখুন..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-3 rounded-xl border border-stone-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#800020]"
@@ -378,7 +380,14 @@ export default function PublicPortalPage({ db, onUpdateDB, showToast, onOpenRece
                 return (
                   <div key={m.id} className="p-4 rounded-xl bg-amber-50/50 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                      <div className="font-extrabold text-stone-900 text-base">{m.name}</div>
+                      <div className="flex items-center gap-2">
+                        <div className="font-extrabold text-stone-900 text-base">{m.name}</div>
+                        {getMemberBillNo(m) && (
+                          <span className="font-mono font-bold text-xs bg-amber-100 text-amber-900 px-2 py-0.5 rounded-md border border-amber-300">
+                            বিল #{getMemberBillNo(m)}
+                          </span>
+                        )}
+                      </div>
                       <div className="text-xs text-stone-600 mt-0.5">
                         বাড়ি: <span className="font-semibold text-stone-800">{m.address || '-'}</span> | ধরন: {m.member_type}
                       </div>
