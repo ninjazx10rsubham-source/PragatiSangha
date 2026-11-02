@@ -24,13 +24,20 @@ export default function LoginScreen({ onLogin, onOpenPublic, clubName, eventName
   };
 
   return (
-    <div 
-      className="min-h-screen w-full flex items-center justify-center relative overflow-hidden bg-cover bg-center bg-no-repeat px-4 py-8"
-      style={{ 
-        backgroundImage: `linear-gradient(to bottom, rgba(20, 3, 7, 0.42), rgba(50, 7, 16, 0.52), rgba(15, 1, 4, 0.70)), url(${MAA_SHYAMA_FULL_BG})`,
-        backgroundPosition: 'center 15%' 
-      }}
-    >
+    <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden px-4 py-8 bg-[#120205]">
+      {/* Full Maa Kali Background Layer - 100% Complete Uncropped */}
+      <div 
+        className="absolute inset-[-25px] bg-cover bg-center pointer-events-none filter blur-2xl brightness-50 scale-110"
+        style={{ backgroundImage: `url(${MAA_SHYAMA_FULL_BG})` }}
+      />
+      <div 
+        className="absolute inset-0 bg-contain bg-center bg-no-repeat pointer-events-none opacity-95 filter drop-shadow-[0_0_50px_rgba(0,0,0,0.9)]"
+        style={{ backgroundImage: `url(${MAA_SHYAMA_FULL_BG})` }}
+      />
+      <div 
+        className="absolute inset-0 pointer-events-none"
+        style={{ background: 'radial-gradient(ellipse at center, rgba(30,4,10,0.1) 0%, rgba(18,2,5,0.4) 60%, rgba(10,1,3,0.75) 100%)' }}
+      />
 
       {/* Decorative background glow */}
       <div className="absolute top-10 left-10 w-72 h-72 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />

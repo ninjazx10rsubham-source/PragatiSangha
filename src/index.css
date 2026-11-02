@@ -9,15 +9,50 @@
 }
 
 /* ============================================================
-   Full Background Maa Kali Layer & Frosted Surfaces
+   Full Background Maa Kali Layer (100% Full Uncropped + Ambient Aura)
    ============================================================ */
+.shyama-full-bg-wrapper {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -10;
+  overflow: hidden;
+  background-color: #120205;
+}
+
+.shyama-full-bg-ambient {
+  position: absolute;
+  inset: -25px;
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  filter: blur(28px) brightness(0.48);
+  transform: scale(1.12);
+}
+
+.shyama-full-bg-center {
+  position: absolute;
+  inset: 0;
+  background-size: contain;
+  background-position: center center;
+  background-repeat: no-repeat;
+  opacity: 0.95;
+  filter: drop-shadow(0 0 50px rgba(0, 0, 0, 0.9));
+}
+
+.shyama-full-bg-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(30, 4, 10, 0.1) 0%, rgba(18, 2, 5, 0.35) 60%, rgba(10, 1, 3, 0.65) 100%);
+}
+
 .shyama-full-bg {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: -10;
-  background-size: cover;
-  background-position: center 15%;
+  background-size: contain;
+  background-position: center center;
   background-repeat: no-repeat;
   background-attachment: fixed;
 }

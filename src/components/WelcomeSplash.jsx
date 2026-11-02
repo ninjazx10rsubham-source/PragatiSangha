@@ -72,7 +72,7 @@ export default function WelcomeSplash({ onComplete, clubName = 'প্রগত�
             <img
               src={MAA_SHYAMA_DORSON_IMG}
               alt="মা শ্যামা দর্শন"
-              className="w-full h-full object-cover object-top transform hover:scale-105 transition duration-700"
+              className="w-full h-full object-contain transform hover:scale-105 transition duration-700"
             />
           </div>
 

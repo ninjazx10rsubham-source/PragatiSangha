@@ -371,14 +371,18 @@ export default function App() {
   return (
     <div className="min-h-screen bg-transparent text-[#2D1810] flex flex-col font-bengali relative overflow-x-hidden">
       {/* Full Maa Kali Background Layer */}
-      <div 
-        className="shyama-full-bg"
-        style={{ 
-          backgroundImage: `linear-gradient(to bottom, rgba(20, 2, 6, 0.38), rgba(50, 6, 15, 0.45), rgba(15, 1, 4, 0.62)), url(${MAA_SHYAMA_FULL_BG})`,
-          backgroundPosition: 'center 15%' 
-        }}
-        aria-hidden="true"
-      />
+      {/* Full Maa Kali Background Layer - 100% Complete Uncropped Photo */}
+      <div className="shyama-full-bg-wrapper" aria-hidden="true">
+        <div 
+          className="shyama-full-bg-ambient" 
+          style={{ backgroundImage: `url(${MAA_SHYAMA_FULL_BG})` }} 
+        />
+        <div 
+          className="shyama-full-bg-center" 
+          style={{ backgroundImage: `url(${MAA_SHYAMA_FULL_BG})` }} 
+        />
+        <div className="shyama-full-bg-vignette" />
+      </div>
       {/* Startup Opening Animation with Maa Shyama Photo */}
       {showSplash && (
         <WelcomeSplash
