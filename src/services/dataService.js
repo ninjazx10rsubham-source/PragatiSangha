@@ -193,7 +193,7 @@ export function reconcileMemberBalances(members, payments) {
     }
   });
 
-  return members.map((m) => {
+  return members.map((m, idx) => {
     const hasPayments = (m.id && paymentTotals[m.id] !== undefined) || (m.name && paymentTotals[m.name] !== undefined);
     const actualCollected = hasPayments 
       ? ((m.id && paymentTotals[m.id] !== undefined) ? paymentTotals[m.id] : paymentTotals[m.name])
@@ -213,6 +213,7 @@ export function reconcileMemberBalances(members, payments) {
 
     return {
       ...m,
+      sl_no: idx + 1,
       collected_amount: actualCollected,
       status,
       last_payment_date: lastDate
@@ -251,6 +252,11 @@ export function loadLocalDB() {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (!Array.isArray(parsed.members)) parsed.members = [];
+      else {
+        parsed.members = parsed.members
+          .sort((a, b) => (Number(a.sl_no) || 0) - (Number(b.sl_no) || 0))
+          .map((m, idx) => ({ ...m, sl_no: idx + 1 }));
+      }
       if (!Array.isArray(parsed.payments)) parsed.payments = [];
       if (!Array.isArray(parsed.marketEntries)) parsed.marketEntries = [];
       if (!Array.isArray(parsed.expenses)) parsed.expenses = [];
@@ -399,10 +405,13 @@ export async function fetchSupabaseData() {
       })()
     };
 
-    const rawMembers = (membersRes.data || []).map(m => ({
-      ...m,
-      previous_year_amount: Number(m.previous_year_amount) || 0
-    }));
+    const rawMembers = (membersRes.data || [])
+      .sort((a, b) => (Number(a.sl_no) || 0) - (Number(b.sl_no) || 0))
+      .map((m, idx) => ({
+        ...m,
+        sl_no: idx + 1,
+        previous_year_amount: Number(m.previous_year_amount) || 0
+      }));
     const rawPayments = paymentsRes.data || [];
     const reconciledMembers = reconcileMemberBalances(rawMembers, rawPayments);
 

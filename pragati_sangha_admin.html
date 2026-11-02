@@ -131,6 +131,9 @@ function loadDB() {
       if (!Array.isArray(parsed.membershipTypes) || parsed.membershipTypes.length === 0) {
         parsed.membershipTypes = defaultMembershipTypes.map(t => ({ ...t }));
       }
+      if (Array.isArray(parsed.members) && parsed.members.length > 0) {
+        parsed.members = parsed.members.map((m, idx) => ({ ...m, ক্রমিক: idx + 1 }));
+      }
       return parsed;
     }
   } catch (e) {
@@ -773,7 +776,10 @@ function MembersPage() {
       তারিখ: "",
       মন্তব্য: form.মন্তব্য || "",
     };
-    updateDB((d) => ({ ...d, members: [...d.members, newMember] }));
+    updateDB((d) => {
+      const list = [...d.members, newMember];
+      return { ...d, members: list.map((m, idx) => ({ ...m, ক্রমিক: idx + 1 })) };
+    });
     showToast("নাগরিকের তথ্য সফলভাবে যুক্ত হয়েছে।");
     setModal(null);
   };
@@ -814,7 +820,10 @@ function MembersPage() {
   };
 
   const handleDelete = () => {
-    updateDB((d) => ({ ...d, members: d.members.filter((m) => m.id !== confirmDelete.id) }));
+    updateDB((d) => {
+      const remaining = d.members.filter((m) => m.id !== confirmDelete.id);
+      return { ...d, members: remaining.map((m, idx) => ({ ...m, ক্রমিক: idx + 1 })) };
+    });
     showToast("নাগরিকের তথ্য মুছে ফেলা হয়েছে।");
     setConfirmDelete(null);
   };

@@ -36,7 +36,6 @@ import { formatTaka, toBnDigits } from '../utils/formatters';
 import { exportMembersToExcel, exportPreviousYearMembersToExcel, getWhatsAppDueReminderUrl } from '../services/exportService';
 import { deleteMemberFromSupabase, deletePreviousYearMemberFromSupabase, defaultPreviousYearMembers, getNextReceiptNo } from '../services/dataService';
 import { getMemberBillNo, encodeMemberBillNo, matchMemberBillNo } from '../utils/billHelper';
-
 export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }) {
   const [activeMainTab, setActiveMainTab] = useState('current'); // Show current members where all 205 members are listed!
   const [search, setSearch] = useState('');
@@ -45,7 +44,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
   const [prevSearch, setPrevSearch] = useState('');
   const [modalState, setModalState] = useState(null); // { type: 'add' | 'edit' | 'pay' | 'delete' | 'add_prev' | 'edit_prev' | 'delete_prev', member, prevRecord }
   const [autoFilledNotice, setAutoFilledNotice] = useState(null);
-
   const [paymentForm, setPaymentForm] = useState({
     amount: '',
     payment_mode: 'নগদ',
@@ -53,7 +51,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
     payment_date: new Date().toISOString().split('T')[0],
     notes: ''
   });
-
   const [memberForm, setMemberForm] = useState({
     name: '',
     bill_no: '',
@@ -64,7 +61,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
     target_amount: 500,
     notes: ''
   });
-
   const [prevRecordForm, setPrevRecordForm] = useState({
     name: '',
     phone: '',
@@ -73,10 +69,8 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
     previous_year_amount: '',
     notes: ''
   });
-
   const members = db.members || [];
   const membershipTypes = db.settings?.membership_types || [];
-
   // Previous year ledger records (Directly bound to editable db.previousYearMembers)
   const previousYearList = useMemo(() => {
     if (Array.isArray(db.previousYearMembers)) {
@@ -84,7 +78,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
     }
     return defaultPreviousYearMembers;
   }, [db.previousYearMembers]);
-
   // Set of names already present in current year
   const currentMembersMap = useMemo(() => {
     const map = new Map();
@@ -93,7 +86,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
     });
     return map;
   }, [members]);
-
   // Archive filtered members
   const filteredPreviousList = useMemo(() => {
     return previousYearList.filter(p => {
@@ -106,13 +98,11 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
       );
     });
   }, [previousYearList, prevSearch]);
-
   // Archive counts
   const archiveTotalCount = previousYearList.length;
   const archiveImportedCount = previousYearList.filter(p => currentMembersMap.has(p.name.trim().toLowerCase())).length;
   const archiveRemainingCount = Math.max(0, archiveTotalCount - archiveImportedCount);
   const archiveTotalAmount = previousYearList.reduce((sum, p) => sum + (Number(p.previous_year_amount) || 0), 0);
-
   // Live matching previous records when typing in Add modal
   const matchingPrevious = useMemo(() => {
     if (modalState?.type !== 'add') return [];
@@ -125,7 +115,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
       return pName.includes(q) || pPhone.includes(q) || pAddr.includes(q);
     }).slice(0, 4);
   }, [modalState?.type, memberForm.name, previousYearList]);
-
   // KPI Computations for Current Year
   const totalTarget = members.reduce((sum, m) => sum + (Number(m.target_amount) || 0), 0);
   const totalPrevious = members.reduce((sum, m) => sum + (Number(m.previous_year_amount) || 0), 0);
@@ -133,7 +122,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
   const membersTotal = members.reduce((sum, m) => sum + (Number(m.collected_amount) || 0), 0);
   const totalCollected = paymentsTotal > 0 ? paymentsTotal : membersTotal;
   const netGrowth = totalTarget - totalPrevious;
-
   const filteredMembers = useMemo(() => {
     return members.filter((m) => {
       if (m.visible === false) return false;
@@ -146,27 +134,22 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
         matchMemberBillNo(m, search);
       
       const matchesStatus = statusFilter === 'সবাই' || m.status === statusFilter;
-
       const prev = Number(m.previous_year_amount) || 0;
       const curr = Number(m.target_amount) || 0;
       const diff = curr - prev;
-
       let matchesDiff = true;
       if (diffFilter === 'বৃদ্ধি') matchesDiff = prev > 0 && diff > 0;
       else if (diffFilter === 'হ্রাস') matchesDiff = prev > 0 && diff < 0;
       else if (diffFilter === 'একই') matchesDiff = prev > 0 && diff === 0;
       else if (diffFilter === 'নতুন') matchesDiff = prev === 0;
-
       return matchesSearch && matchesStatus && matchesDiff;
     });
   }, [members, search, statusFilter, diffFilter]);
-
   const deriveStatus = (target, collected) => {
     if (collected <= 0) return 'বাকি';
     if (collected >= target) return 'জমা হয়েছে';
     return 'আংশিক জমা';
   };
-
   // --- Current Year Member Handlers ---
   const handleOpenAdd = (prefillData = null) => {
     setAutoFilledNotice(prefillData ? { ...prefillData } : null);
@@ -182,7 +165,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
     });
     setModalState({ type: 'add' });
   };
-
   const handleSelectPreviousSuggestion = (p) => {
     const prevAmt = Number(p.previous_year_amount) || 0;
     setMemberForm({
@@ -200,7 +182,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
     });
     setAutoFilledNotice(p);
   };
-
   const handleOpenEdit = (member) => {
     setAutoFilledNotice(null);
     setMemberForm({
@@ -215,18 +196,15 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
     });
     setModalState({ type: 'edit', member });
   };
-
   const handleSaveMember = (e) => {
     e.preventDefault();
     if (!memberForm.name.trim()) {
       showToast('সদস্যের নাম আবশ্যক', 'error');
       return;
     }
-
     const prevAmt = Number(memberForm.previous_year_amount) || 0;
     const targetAmt = Number(memberForm.target_amount) || 0;
     const bill = (memberForm.bill_no || '').trim();
-
     if (modalState.type === 'add') {
       const fullNotes = encodeMemberBillNo(memberForm.notes.trim(), bill);
       const newMember = {
@@ -243,19 +221,26 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
         last_payment_date: null,
         notes: fullNotes
       };
-      onUpdateDB((prev) => ({
-        ...prev,
-        members: [...(prev.members || []), newMember]
-      }));
+      onUpdateDB((prev) => {
+        const nextMembers = [...(prev.members || []), newMember].map((m, idx) => ({
+          ...m,
+          sl_no: idx + 1
+        }));
+        return {
+          ...prev,
+          members: nextMembers
+        };
+      });
       showToast(`'${newMember.name}' সফলভাবে চলতি বছরে যুক্ত হয়েছে!`);
     } else if (modalState.type === 'edit') {
       onUpdateDB((prev) => ({
         ...prev,
-        members: (prev.members || []).map((m) => {
+        members: (prev.members || []).map((m, idx) => {
           if (m.id === modalState.member.id) {
             const fullNotes = encodeMemberBillNo(memberForm.notes.trim(), bill);
             return {
               ...m,
+              sl_no: idx + 1,
               name: memberForm.name.trim(),
               phone: memberForm.phone.trim(),
               address: memberForm.address.trim(),
@@ -266,14 +251,13 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
               status: deriveStatus(targetAmt, m.collected_amount)
             };
           }
-          return m;
+          return { ...m, sl_no: idx + 1 };
         })
       }));
       showToast('সদস্যের তথ্য সফলভাবে হালনাগাদ হয়েছে!');
     }
     setModalState(null);
   };
-
   const handleOpenPay = (member) => {
     const due = Math.max(0, (member.target_amount || 0) - (member.collected_amount || 0));
     setPaymentForm({
@@ -285,7 +269,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
     });
     setModalState({ type: 'pay', member });
   };
-
   const handleSavePayment = (e) => {
     e.preventDefault();
     const amount = Number(paymentForm.amount);
@@ -293,15 +276,12 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
       showToast('বৈধ টাকার পরিমাণ লিখুন', 'error');
       return;
     }
-
     const member = modalState.member;
     const currentCollected = Number(member.collected_amount) || 0;
     const newCollected = currentCollected + amount;
     const target = Number(member.target_amount) || 0;
     const newStatus = deriveStatus(target, newCollected);
-
     const receiptNo = getNextReceiptNo(db.payments);
-
     const newPayment = {
       id: 'pay_' + Date.now(),
       receipt_no: receiptNo,
@@ -313,39 +293,34 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
       collected_by: paymentForm.collected_by,
       notes: paymentForm.notes.trim()
     };
-
     onUpdateDB((prev) => ({
       ...prev,
-      members: (prev.members || []).map((m) =>
+      members: (prev.members || []).map((m, idx) =>
         m.id === member.id
           ? {
               ...m,
+              sl_no: idx + 1,
               collected_amount: newCollected,
               last_payment_date: paymentForm.payment_date,
               status: newStatus
             }
-          : m
+          : { ...m, sl_no: idx + 1 }
       ),
       payments: [newPayment, ...(prev.payments || [])]
     }));
-
     confetti({
       particleCount: 80,
       spread: 70,
       origin: { y: 0.6 }
     });
-
     showToast(`চাঁদা জমা সফল! রসিদ নং: ${receiptNo}`);
     setModalState(null);
-
     onOpenReceipt(newPayment, { ...member, collected_amount: newCollected });
   };
-
   // Fixed Member Deletion: Deletes from Supabase directly & updates DB state
   const handleDeleteMember = async () => {
     const memberToDelete = modalState?.member;
     if (!memberToDelete) return;
-
     try {
       if (memberToDelete.id) {
         await deleteMemberFromSupabase(memberToDelete.id);
@@ -353,15 +328,16 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
     } catch (err) {
       console.error('Error deleting member from Supabase:', err);
     }
-
-    onUpdateDB((prev) => ({
-      ...prev,
-      members: (prev.members || []).filter((m) => m.id !== memberToDelete.id)
-    }));
+    onUpdateDB((prev) => {
+      const remaining = (prev.members || []).filter((m) => m.id !== memberToDelete.id);
+      return {
+        ...prev,
+        members: remaining.map((m, idx) => ({ ...m, sl_no: idx + 1 }))
+      };
+    });
     showToast(`'${memberToDelete.name}' সফলভাবে মুছে ফেলা হয়েছে!`);
     setModalState(null);
   };
-
   // --- Previous Year Ledger Handlers (Editable & Deletable) ---
   const handleOpenAddPrevRecord = () => {
     setPrevRecordForm({
@@ -374,7 +350,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
     });
     setModalState({ type: 'add_prev' });
   };
-
   const handleOpenEditPrevRecord = (record) => {
     setPrevRecordForm({
       name: record.name,
@@ -386,16 +361,13 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
     });
     setModalState({ type: 'edit_prev', prevRecord: record });
   };
-
   const handleSavePrevRecord = (e) => {
     e.preventDefault();
     if (!prevRecordForm.name.trim()) {
       showToast('সদস্যের নাম আবশ্যক', 'error');
       return;
     }
-
     const prevAmt = Number(prevRecordForm.previous_year_amount) || 0;
-
     if (modalState.type === 'add_prev') {
       const newRecord = {
         id: 'prev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
@@ -406,18 +378,15 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
         previous_year_amount: prevAmt,
         notes: prevRecordForm.notes.trim()
       };
-
       onUpdateDB(prev => ({
         ...prev,
         previousYearMembers: [newRecord, ...(prev.previousYearMembers || defaultPreviousYearMembers)]
       }));
-
       showToast(`'${newRecord.name}' বিগত বছরের খাতায় সফলভাবে যোগ করা হয়েছে!`);
     } else if (modalState.type === 'edit_prev') {
       const targetRecord = modalState.prevRecord;
       const oldName = targetRecord.name.trim().toLowerCase();
       const updatedName = prevRecordForm.name.trim();
-
       onUpdateDB(prev => {
         const currentList = prev.previousYearMembers || defaultPreviousYearMembers;
         const updatedList = currentList.map(p =>
@@ -433,7 +402,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
               }
             : p
         );
-
         // Synchronize corresponding member in current year if present
         const updatedMembers = (prev.members || []).map(m => {
           if (m.name.trim().toLowerCase() === oldName) {
@@ -446,24 +414,19 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
           }
           return m;
         });
-
         return {
           ...prev,
           previousYearMembers: updatedList,
           members: updatedMembers
         };
       });
-
       showToast(`'${updatedName}'-এর বিগত বছরের তথ্য সফলভাবে হালনাগাদ করা হয়েছে!`);
     }
-
     setModalState(null);
   };
-
   const handleDeletePrevRecord = async () => {
     const toDelete = modalState?.prevRecord;
     if (!toDelete) return;
-
     try {
       if (toDelete.id) {
         await deletePreviousYearMemberFromSupabase(toDelete.id);
@@ -471,25 +434,20 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
     } catch (err) {
       console.error('Error deleting prev member from Supabase:', err);
     }
-
     onUpdateDB(prev => ({
       ...prev,
       previousYearMembers: (prev.previousYearMembers || defaultPreviousYearMembers).filter(p => p.id !== toDelete.id)
     }));
-
     showToast(`'${toDelete.name}'-এর রেকর্ড বিগত বছরের খাতা থেকে মুছে ফেলা হয়েছে!`);
     setModalState(null);
   };
-
   // Bulk import remaining previous year members to current year
   const handleBulkImportPrevious = () => {
     const unimported = previousYearList.filter(p => !currentMembersMap.has(p.name.trim().toLowerCase()));
-
     if (unimported.length === 0) {
       showToast('বিগত বছরের সকল সদস্য ইতিমধ্যে চলতি তালিকায় যুক্ত রয়েছে!', 'info');
       return;
     }
-
     const currentCount = members.length;
     const newMembers = unimported.map((p, idx) => ({
       id: 'mem_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6) + '_' + idx,
@@ -505,27 +463,25 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
       last_payment_date: null,
       notes: 'বিগত বছরের খাতা থেকে অটো-ইম্পোর্ট'
     }));
-
-    onUpdateDB(prev => ({
-      ...prev,
-      members: [...(prev.members || []), ...newMembers]
-    }));
-
+    onUpdateDB(prev => {
+      const combined = [...(prev.members || []), ...newMembers];
+      return {
+        ...prev,
+        members: combined.map((m, idx) => ({ ...m, sl_no: idx + 1 }))
+      };
+    });
     confetti({
       particleCount: 90,
       spread: 75,
       origin: { y: 0.6 }
     });
-
     showToast(`সফলভাবে ${toBnDigits(unimported.length)} জন সদস্য চলতি বছরে অন্তর্ভুক্ত করা হয়েছে!`);
     setActiveMainTab('current');
   };
-
   // Helper calculation for live form difference preview
   const formPrev = Number(memberForm.previous_year_amount) || 0;
   const formTarget = Number(memberForm.target_amount) || 0;
   const formDiff = formTarget - formPrev;
-
   return (
     <div className="space-y-6">
       {/* Header bar */}
@@ -538,7 +494,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
             পূর্ববর্তী বছরের তুলনা, চাঁদা বৃদ্ধি/হ্রাস ট্র্যাকিং, অটো-ফেচ ও খাতা সম্পাদনা
           </p>
         </div>
-
         <div className="flex items-center gap-2">
           <button
             onClick={() => exportMembersToExcel(members)}
@@ -547,7 +502,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
             <Download size={15} />
             <span>Excel এক্সপোর্ট</span>
           </button>
-
           <button
             onClick={() => handleOpenAdd()}
             className="px-4 py-2 rounded-xl bg-[#4A0E17] hover:bg-[#6b1421] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-md"
@@ -557,7 +511,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
           </button>
         </div>
       </div>
-
       {/* CURRENT YEAR MEMBERS & COLLECTIONS */}
       <div className="space-y-6">
           {/* Comparison KPI Summary Cards */}
@@ -567,19 +520,16 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
               <p className="text-xl sm:text-2xl font-extrabold text-[#4A0E17] mt-1">{toBnDigits(members.length)} জন</p>
               <span className="text-[11px] text-stone-500">নিবন্ধিত নাগরিক</span>
             </div>
-
             <div className="p-4 rounded-2xl bg-[#FFFDF7] border border-[#EADBB6] shadow-xs">
               <span className="text-xs font-bold text-stone-500 uppercase block">আগের বছরের মোট চাঁদা</span>
               <p className="text-xl sm:text-2xl font-extrabold text-stone-700 mt-1">{formatTaka(totalPrevious)}</p>
               <span className="text-[11px] text-stone-500">বিগত বছরের ভিত্তি</span>
             </div>
-
             <div className="p-4 rounded-2xl bg-[#FFFDF7] border border-[#EADBB6] shadow-xs">
               <span className="text-xs font-bold text-stone-500 uppercase block">এই বছরের নির্ধারিত চাঁদা</span>
               <p className="text-xl sm:text-2xl font-extrabold text-[#4A0E17] mt-1">{formatTaka(totalTarget)}</p>
               <span className="text-[11px] text-emerald-700 font-semibold">আদায় হয়েছে: {formatTaka(totalCollected)}</span>
             </div>
-
             <div className={`p-4 rounded-2xl border shadow-xs ${netGrowth >= 0 ? 'bg-emerald-50/70 border-emerald-300' : 'bg-rose-50/70 border-rose-300'}`}>
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase text-stone-700">সামগ্রিক চাঁদার প্রবৃদ্ধি</span>
@@ -597,7 +547,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
               </span>
             </div>
           </div>
-
           {/* Filter and Search Bar */}
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
@@ -610,7 +559,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-200 bg-white text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#800020]"
               />
             </div>
-
             {/* Change Comparison Filter Pills */}
             <div className="flex items-center gap-1.5 bg-[#FFFDF7] p-1 rounded-xl border border-stone-200 shrink-0 overflow-x-auto">
               {[
@@ -633,7 +581,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                 </button>
               ))}
             </div>
-
             {/* Status Pills */}
             <div className="flex items-center gap-1.5 bg-[#FFFDF7] p-1 rounded-xl border border-stone-200 shrink-0 overflow-x-auto">
               {['সবাই', 'জমা হয়েছে', 'আংশিক জমা', 'বাকি'].map((tab) => (
@@ -651,7 +598,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
               ))}
             </div>
           </div>
-
           {/* Members Table */}
           <div className="bg-[#FFFDF7] rounded-2xl border border-[#EADBB6] shadow-sm overflow-hidden">
             {filteredMembers.length === 0 ? (
@@ -684,7 +630,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                       const diff = target - prev;
                       const reminderUrl = getWhatsAppDueReminderUrl(m);
                       const billNo = getMemberBillNo(m);
-
                       return (
                         <tr key={m.id} className="hover:bg-[#FDF8EA]/60 transition">
                           <td className="py-3 px-4 font-mono text-stone-500">{toBnDigits(m.sl_no || idx + 1)}</td>
@@ -719,7 +664,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                               {m.member_type}
                             </span>
                           </td>
-
                           {/* Previous Year vs Current Year */}
                           <td className="py-3 px-4">
                             <div className="text-xs">
@@ -727,7 +671,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                               <span className="text-stone-900 font-extrabold text-sm block">বর্তমানে: {formatTaka(target)}</span>
                             </div>
                           </td>
-
                           {/* Growth / Difference Badge */}
                           <td className="py-3 px-4">
                             {prev === 0 ? (
@@ -752,7 +695,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                               </span>
                             )}
                           </td>
-
                           <td className="py-3 px-4 font-bold text-emerald-700">{formatTaka(collected)}</td>
                           <td className="py-3 px-4 font-bold text-rose-700">{formatTaka(due)}</td>
                           
@@ -770,7 +712,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                               <span>{m.status}</span>
                             </span>
                           </td>
-
                           <td className="py-3 px-4 text-right">
                             <div className="flex items-center justify-end gap-1.5">
                               {/* Pay Button */}
@@ -782,7 +723,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                                 <Receipt size={14} />
                                 <span>জমা নিন</span>
                               </button>
-
                               {/* WhatsApp Reminder (If unpaid & phone exists) */}
                               {reminderUrl && m.status !== 'জমা হয়েছে' && (
                                 <a
@@ -795,7 +735,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                                   <Share2 size={15} />
                                 </a>
                               )}
-
                               {/* Edit */}
                               <button
                                 onClick={() => handleOpenEdit(m)}
@@ -804,7 +743,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                               >
                                 <Edit3 size={15} />
                               </button>
-
                               {/* Delete */}
                               <button
                                 onClick={() => setModalState({ type: 'delete', member: m })}
@@ -824,7 +762,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
             )}
           </div>
         </div>
-
       {/* Add / Edit Current Year Member Modal */}
       {(modalState?.type === 'add' || modalState?.type === 'edit') && (
         <Modal 
@@ -843,7 +780,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                 </div>
               </div>
             )}
-
             <div>
               <label className="block text-stone-700 font-bold mb-1">সদস্যের পূর্ণ নাম *</label>
               <input
@@ -859,7 +795,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                 placeholder="যেমন: শ্রী নিমাই চন্দ্র দাস"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-[#800020] text-sm font-semibold"
               />
-
               {/* Live auto-suggestions from previous year records */}
               {modalState.type === 'add' && matchingPrevious.length > 0 && (
                 <div className="mt-2 p-2.5 bg-amber-50/80 rounded-xl border border-amber-200 space-y-1.5">
@@ -885,7 +820,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                 </div>
               )}
             </div>
-
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block text-stone-700 font-bold mb-1">বিল নং (Bill No)</label>
@@ -897,7 +831,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                   className="w-full px-3.5 py-2.5 rounded-xl border-2 border-amber-300 bg-amber-50/30 font-mono font-bold text-stone-900 focus:outline-none focus:ring-2 focus:ring-[#800020]"
                 />
               </div>
-
               <div>
                 <label className="block text-stone-700 font-bold mb-1">বাড়ি / ফ্ল্যাট নং</label>
                 <input
@@ -908,7 +841,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                   className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-[#800020]"
                 />
               </div>
-
               <div>
                 <label className="block text-stone-700 font-bold mb-1">মোবাইল নম্বর</label>
                 <input
@@ -920,7 +852,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                 />
               </div>
             </div>
-
             <div>
               <label className="block text-stone-700 font-bold mb-1">সদস্যপদের ধরন</label>
               <select
@@ -933,7 +864,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                 ))}
               </select>
             </div>
-
             {/* Previous Year vs Current Year Chanda Inputs */}
             <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200 space-y-3">
               <span className="text-xs font-bold text-amber-900 block uppercase tracking-wider">
@@ -954,7 +884,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                     className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none font-semibold text-stone-800"
                   />
                 </div>
-
                 <div>
                   <label className="block text-stone-700 font-bold mb-1">
                     এই বছরের নির্ধারিত চাঁদা (₹) *
@@ -970,7 +899,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                   />
                 </div>
               </div>
-
               {/* Dynamic Live Difference Box */}
               <div className="pt-1">
                 {formPrev === 0 ? (
@@ -1006,7 +934,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                 )}
               </div>
             </div>
-
             <div>
               <label className="block text-stone-700 font-bold mb-1">মন্তব্য (ঐচ্ছিক)</label>
               <input
@@ -1017,7 +944,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                 className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-[#800020]"
               />
             </div>
-
             <div className="flex justify-end gap-2 pt-3 border-t">
               <button
                 type="button"
@@ -1036,7 +962,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
           </form>
         </Modal>
       )}
-
       {/* Add / Edit Previous Year Record Modal */}
       {(modalState?.type === 'add_prev' || modalState?.type === 'edit_prev') && (
         <Modal 
@@ -1055,7 +980,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                 className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-[#800020] text-sm font-semibold"
               />
             </div>
-
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-stone-700 font-bold mb-1">বাড়ি / ফ্ল্যাট নং</label>
@@ -1067,7 +991,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                   className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-[#800020]"
                 />
               </div>
-
               <div>
                 <label className="block text-stone-700 font-bold mb-1">মোবাইল নম্বর</label>
                 <input
@@ -1079,7 +1002,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                 />
               </div>
             </div>
-
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-stone-700 font-bold mb-1">সদস্যপদের ধরন</label>
@@ -1093,7 +1015,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                   ))}
                 </select>
               </div>
-
               <div>
                 <label className="block text-stone-700 font-bold mb-1">বিগত বছরের চাঁদা (₹) *</label>
                 <input
@@ -1107,7 +1028,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                 />
               </div>
             </div>
-
             <div>
               <label className="block text-stone-700 font-bold mb-1">মন্তব্য (ঐচ্ছিক)</label>
               <input
@@ -1118,7 +1038,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                 className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-[#800020]"
               />
             </div>
-
             <div className="flex justify-end gap-2 pt-3 border-t">
               <button
                 type="button"
@@ -1137,7 +1056,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
           </form>
         </Modal>
       )}
-
       {/* Collect Payment Modal */}
       {modalState?.type === 'pay' && (
         <Modal 
@@ -1161,7 +1079,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                 </span>
               </div>
             </div>
-
             <div>
               <label className="block text-stone-700 font-bold mb-1">এখন জমা দেওয়ার পরিমাণ (₹) *</label>
               <input
@@ -1174,7 +1091,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                 className="w-full px-4 py-3 rounded-xl border-2 border-[#800020] text-lg font-bold text-[#4A0E17] focus:outline-none bg-amber-50/30"
               />
             </div>
-
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-stone-700 font-bold mb-1">পেমেন্ট মাধ্যম</label>
@@ -1189,7 +1105,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                   <option value="চেক">চেক</option>
                 </select>
               </div>
-
               <div>
                 <label className="block text-stone-700 font-bold mb-1">জমার তারিখ</label>
                 <input
@@ -1200,7 +1115,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                 />
               </div>
             </div>
-
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-stone-700 font-bold mb-1">কে সংগ্রহ করলেন?</label>
@@ -1211,7 +1125,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                   className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 focus:outline-none"
                 />
               </div>
-
               <div>
                 <label className="block text-stone-700 font-bold mb-1">মন্তব্য (ঐচ্ছিক)</label>
                 <input
@@ -1223,7 +1136,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                 />
               </div>
             </div>
-
             <div className="flex justify-end gap-2 pt-3 border-t">
               <button
                 type="button"
@@ -1243,7 +1155,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
           </form>
         </Modal>
       )}
-
       {/* Delete Current Year Member Confirmation Modal */}
       {modalState?.type === 'delete' && (
         <Modal title="সদস্য মুছে ফেলার নিশ্চিতকরণ" onClose={() => setModalState(null)}>
@@ -1271,7 +1182,6 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
           </div>
         </Modal>
       )}
-
       {/* Delete Previous Year Record Confirmation Modal */}
       {modalState?.type === 'delete_prev' && (
         <Modal title="বিগত বছরের রেকর্ড মুছে ফেলার নিশ্চিতকরণ" onClose={() => setModalState(null)}>
