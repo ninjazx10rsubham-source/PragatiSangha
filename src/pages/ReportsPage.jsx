@@ -27,6 +27,20 @@ export default function ReportsPage({ db }) {
   const totalFilteredMarket = filteredMarket.reduce((s, m) => s + (Number(m.amount) || 0), 0);
   const totalFilteredCollection = filteredPayments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
 
+  // Daily collection summary
+  const dailySummary = React.useMemo(() => {
+    const map = {};
+    filteredPayments.forEach((p) => {
+      const d = p.payment_date || (p.created_at ? p.created_at.slice(0, 10) : 'অজানা');
+      if (!map[d]) {
+        map[d] = { date: d, total: 0, count: 0 };
+      }
+      map[d].total += Number(p.amount) || 0;
+      map[d].count += 1;
+    });
+    return Object.values(map).sort((a, b) => b.date.localeCompare(a.date));
+  }, [filteredPayments]);
+
   const handlePrint = () => {
     window.print();
   };
@@ -140,6 +154,44 @@ export default function ReportsPage({ db }) {
             <span className="text-stone-600 block">মোট পূজা খরচ</span>
             <span className="text-lg font-bold text-purple-900">{formatTaka(totalFilteredExpense)}</span>
           </div>
+        </div>
+
+        {/* Daily Collection Summary Section in Reports */}
+        <div className="mb-8">
+          <h3 className="font-bold text-[#4A0E17] text-sm sm:text-base border-b border-stone-200 pb-2 mb-3 flex items-center justify-between">
+            <span>তারিখ অনুযায়ী সংগৃহীত চাঁদা ({toBnDigits(filteredPayments.length)} টি রসিদ)</span>
+            <span className="text-emerald-700 font-extrabold">{formatTaka(totalFilteredCollection)}</span>
+          </h3>
+          <table className="w-full text-left text-xs sm:text-sm">
+            <thead>
+              <tr className="border-b border-stone-300 text-stone-600 bg-stone-50">
+                <th className="py-2 px-3">তারিখ</th>
+                <th className="py-2 px-3 text-center">রসিদ সংখ্যা</th>
+                <th className="py-2 px-3 text-right">আদায়ের পরিমাণ (₹)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-stone-100">
+              {dailySummary.length === 0 ? (
+                <tr>
+                  <td colSpan="3" className="py-4 text-center text-stone-400">কোনো আদায়ের রেকর্ড নেই</td>
+                </tr>
+              ) : (
+                dailySummary.map((item) => (
+                  <tr key={item.date} className="hover:bg-amber-50/40">
+                    <td className="py-2 px-3 font-semibold text-stone-800">
+                      📅 {formatBnDate(item.date)} ({item.date})
+                    </td>
+                    <td className="py-2 px-3 text-center text-stone-600 font-bold">
+                      {toBnDigits(item.count)} টি
+                    </td>
+                    <td className="py-2 px-3 text-right font-extrabold text-[#4A0E17]">
+                      {formatTaka(item.total)}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
 
         {/* Expenses List */}
