@@ -374,7 +374,8 @@ export default function App() {
       <div 
         className="shyama-full-bg"
         style={{ 
-          backgroundImage: `linear-gradient(to bottom, rgba(20, 5, 8, 0.32), rgba(45, 10, 16, 0.42), rgba(20, 5, 8, 0.58)), url(${MAA_SHYAMA_FULL_BG})` 
+          backgroundImage: `linear-gradient(to bottom, rgba(20, 2, 6, 0.38), rgba(50, 6, 15, 0.45), rgba(15, 1, 4, 0.62)), url(${MAA_SHYAMA_FULL_BG})`,
+          backgroundPosition: 'center 15%' 
         }}
         aria-hidden="true"
       />

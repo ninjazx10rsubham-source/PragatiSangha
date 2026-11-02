@@ -27,7 +27,8 @@ export default function LoginScreen({ onLogin, onOpenPublic, clubName, eventName
     <div 
       className="min-h-screen w-full flex items-center justify-center relative overflow-hidden bg-cover bg-center bg-no-repeat px-4 py-8"
       style={{ 
-        backgroundImage: `linear-gradient(to bottom, rgba(20, 5, 8, 0.45), rgba(45, 10, 16, 0.58), rgba(20, 5, 8, 0.75)), url(${MAA_SHYAMA_FULL_BG})` 
+        backgroundImage: `linear-gradient(to bottom, rgba(20, 3, 7, 0.42), rgba(50, 7, 16, 0.52), rgba(15, 1, 4, 0.70)), url(${MAA_SHYAMA_FULL_BG})`,
+        backgroundPosition: 'center 15%' 
       }}
     >
 

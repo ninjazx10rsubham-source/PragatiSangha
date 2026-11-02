@@ -68,11 +68,11 @@ export default function WelcomeSplash({ onComplete, clubName = 'প্রগত�
           <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-amber-400 to-amber-200 opacity-80 blur-xs"></div>
           
           {/* Maa Shyama Photo */}
-          <div className="relative w-64 h-40 sm:w-80 sm:h-48 rounded-3xl overflow-hidden border-4 border-amber-300 shadow-[0_0_45px_rgba(251,191,36,0.7)] bg-black/60">
+          <div className="relative w-64 h-80 sm:w-72 sm:h-96 rounded-3xl overflow-hidden border-4 border-amber-300 shadow-[0_0_45px_rgba(251,191,36,0.7)] bg-black/60">
             <img
               src={MAA_SHYAMA_DORSON_IMG}
               alt="মা শ্যামা দর্শন"
-              className="w-full h-full object-cover transform hover:scale-105 transition duration-700"
+              className="w-full h-full object-cover object-top transform hover:scale-105 transition duration-700"
             />
           </div>
 

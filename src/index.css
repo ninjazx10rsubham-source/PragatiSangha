@@ -17,17 +17,18 @@
   pointer-events: none;
   z-index: -10;
   background-size: cover;
-  background-position: center 20%;
+  background-position: center 15%;
   background-repeat: no-repeat;
   background-attachment: fixed;
 }
 
-/* Frosted glass effect for cards so Maa Kali background shines through gracefully */
+/* Frosted glass effect for cards matching Maa Kali sacred crimson and gold backdrop */
 .bg-\[\#FFFDF7\],
 .bg-white {
-  background-color: rgba(255, 253, 247, 0.92) !important;
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
+  background-color: rgba(255, 252, 245, 0.94) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border-color: rgba(212, 175, 55, 0.45) !important;
   transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), 
               box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1), 
               border-color 0.25s ease !important;
@@ -37,20 +38,21 @@
    Global Interactive Hover Effects Across Entire Website
    ============================================================ */
 
-/* 1. Universal Card Hover Elevation & Subtle Glow */
+/* 1. Universal Card Hover Elevation & Radiant Festive Glow */
 .bg-\[\#FFFDF7\]:hover,
 .bg-white:hover {
-  background-color: rgba(255, 253, 247, 0.97) !important;
-  box-shadow: 0 14px 30px -4px rgba(74, 14, 23, 0.16), 0 8px 16px -2px rgba(212, 175, 55, 0.2) !important;
+  background-color: rgba(255, 254, 250, 0.98) !important;
+  box-shadow: 0 16px 36px -4px rgba(128, 0, 32, 0.22), 0 8px 20px -2px rgba(212, 175, 55, 0.28) !important;
+  border-color: rgba(212, 175, 55, 0.8) !important;
 }
 
 /* Clickable cards lift on hover */
 .cursor-pointer:hover {
   transform: translateY(-3px) scale(1.006) !important;
-  box-shadow: 0 18px 36px -6px rgba(74, 14, 23, 0.2), 0 10px 18px -4px rgba(212, 175, 55, 0.25) !important;
+  box-shadow: 0 18px 36px -6px rgba(128, 0, 32, 0.25), 0 10px 20px -4px rgba(212, 175, 55, 0.3) !important;
 }
 
-/* 2. Interactive Buttons with Modern Festive Pop */
+/* 2. Interactive Buttons with Sacred Crimson & Gold Pop */
 button {
   transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
               box-shadow 0.18s ease,
@@ -61,7 +63,7 @@ button {
 button:hover:not(:disabled) {
   transform: translateY(-1.5px) !important;
   filter: brightness(1.05) !important;
-  box-shadow: 0 6px 18px -2px rgba(128, 0, 32, 0.28) !important;
+  box-shadow: 0 8px 22px -3px rgba(128, 0, 32, 0.32), 0 4px 12px -2px rgba(212, 175, 55, 0.25) !important;
 }
 
 button:active:not(:disabled) {
@@ -70,6 +72,13 @@ button:active:not(:disabled) {
 }
 
 /* 3. Table Rows Smooth Hover Highlight */
+table thead th {
+  background-color: rgba(246, 235, 210, 0.95) !important;
+  color: #4A0E17 !important;
+  border-color: #EADBB6 !important;
+  font-weight: 700 !important;
+}
+
 table tbody tr {
   transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), 
               transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
@@ -77,7 +86,7 @@ table tbody tr {
 }
 
 table tbody tr:hover {
-  background-color: rgba(247, 238, 211, 0.85) !important;
+  background-color: rgba(254, 243, 199, 0.9) !important;
   transform: scale(1.002);
   position: relative;
   z-index: 5;
@@ -102,7 +111,13 @@ input, select, textarea {
 }
 
 input:hover, select:hover, textarea:hover {
+  border-color: #B45309 !important;
+}
+
+input:focus, select:focus, textarea:focus {
   border-color: #800020 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(128, 0, 32, 0.2) !important;
 }
 
 /* 6. Sidebar Navigation Items Smooth Slide Hover */
@@ -123,7 +138,7 @@ img:hover {
   transform: scale(1.04);
 }
 
-/* Custom festive scrollbar */
+/* Custom festive scrollbar matching Maa Kali gold and crimson */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -134,7 +149,7 @@ img:hover {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #D4AF37;
+  background: #B45309;
   border-radius: 9999px;
 }
 
