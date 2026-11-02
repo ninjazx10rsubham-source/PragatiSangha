@@ -1,3 +1,4 @@
+import DailyCollectionSection from '../components/DailyCollectionSection';
 import React, { useState, useMemo } from 'react';
 import { 
   Users, 
@@ -547,6 +548,9 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
               </span>
             </div>
           </div>
+          {/* Dedicated Section: দিন অনুযায়ী মোট চাঁদা জমার খাতা */}
+          <DailyCollectionSection payments={db.payments || []} />
+
           {/* Filter and Search Bar */}
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
