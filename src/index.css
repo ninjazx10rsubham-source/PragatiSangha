@@ -9,30 +9,28 @@
 }
 
 /* ============================================================
-   Divine Watermark Styles
+   Full Background Maa Kali Layer & Frosted Surfaces
    ============================================================ */
-.shyama-watermark {
+.shyama-full-bg {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+  z-index: -10;
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }
 
-.shyama-watermark-inner {
-  width: 100%;
-  height: 100%;
-  max-width: 820px;
-  max-height: 85vh;
-  background-position: center center;
-  background-repeat: no-repeat;
-  background-size: contain;
-  opacity: 0.085;
-  filter: drop-shadow(0 0 35px rgba(212, 175, 55, 0.35));
-  transition: opacity 0.6s ease;
+/* Frosted glass effect for cards so Maa Kali background shines through gracefully */
+.bg-\[\#FFFDF7\],
+.bg-white {
+  background-color: rgba(255, 253, 247, 0.92) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), 
+              box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1), 
+              border-color 0.25s ease !important;
 }
 
 /* ============================================================
@@ -40,25 +38,16 @@
    ============================================================ */
 
 /* 1. Universal Card Hover Elevation & Subtle Glow */
-.bg-\[\#FFFDF7\],
-.bg-white,
-[class*="rounded-2xl"],
-[class*="rounded-3xl"] {
-  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), 
-              box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1), 
-              border-color 0.25s ease !important;
-}
-
-/* Elevate interactive and surface cards on hover */
 .bg-\[\#FFFDF7\]:hover,
 .bg-white:hover {
-  box-shadow: 0 12px 28px -5px rgba(74, 14, 23, 0.09), 0 6px 14px -3px rgba(212, 175, 55, 0.15) !important;
+  background-color: rgba(255, 253, 247, 0.97) !important;
+  box-shadow: 0 14px 30px -4px rgba(74, 14, 23, 0.16), 0 8px 16px -2px rgba(212, 175, 55, 0.2) !important;
 }
 
 /* Clickable cards lift on hover */
 .cursor-pointer:hover {
   transform: translateY(-3px) scale(1.006) !important;
-  box-shadow: 0 16px 32px -6px rgba(74, 14, 23, 0.14), 0 8px 16px -4px rgba(212, 175, 55, 0.2) !important;
+  box-shadow: 0 18px 36px -6px rgba(74, 14, 23, 0.2), 0 10px 18px -4px rgba(212, 175, 55, 0.25) !important;
 }
 
 /* 2. Interactive Buttons with Modern Festive Pop */
@@ -72,7 +61,7 @@ button {
 button:hover:not(:disabled) {
   transform: translateY(-1.5px) !important;
   filter: brightness(1.05) !important;
-  box-shadow: 0 6px 18px -2px rgba(128, 0, 32, 0.25) !important;
+  box-shadow: 0 6px 18px -2px rgba(128, 0, 32, 0.28) !important;
 }
 
 button:active:not(:disabled) {
@@ -88,7 +77,7 @@ table tbody tr {
 }
 
 table tbody tr:hover {
-  background-color: rgba(247, 238, 211, 0.75) !important;
+  background-color: rgba(247, 238, 211, 0.85) !important;
   transform: scale(1.002);
   position: relative;
   z-index: 5;
@@ -197,7 +186,7 @@ img:hover {
     print-color-adjust: exact !important;
   }
 
-  .shyama-watermark {
+  .shyama-full-bg {
     display: none !important;
   }
 

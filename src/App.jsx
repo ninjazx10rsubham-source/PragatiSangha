@@ -6,6 +6,7 @@ import ReceiptModal from './components/ReceiptModal';
 import LoginScreen from './components/LoginScreen';
 import WelcomeSplash from './components/WelcomeSplash';
 import { MAA_SHYAMA_IMG } from './assets/maaShyamaImage';
+import { MAA_SHYAMA_FULL_BG } from './assets/maaShyamaFullBg';
 
 // Pages
 import DashboardPage from './pages/DashboardPage';
@@ -368,17 +369,15 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FDF8EA] text-[#2D1810] flex flex-col font-bengali relative overflow-x-hidden">
-      {/* Divine Watermark Background across the whole website */}
+    <div className="min-h-screen bg-transparent text-[#2D1810] flex flex-col font-bengali relative overflow-x-hidden">
+      {/* Full Maa Kali Background Layer */}
       <div 
-        className="shyama-watermark" 
+        className="shyama-full-bg"
+        style={{ 
+          backgroundImage: `linear-gradient(to bottom, rgba(20, 5, 8, 0.32), rgba(45, 10, 16, 0.42), rgba(20, 5, 8, 0.58)), url(${MAA_SHYAMA_FULL_BG})` 
+        }}
         aria-hidden="true"
-      >
-        <div 
-          className="shyama-watermark-inner"
-          style={{ backgroundImage: `url(${MAA_SHYAMA_IMG})` }}
-        />
-      </div>
+      />
       {/* Startup Opening Animation with Maa Shyama Photo */}
       {showSplash && (
         <WelcomeSplash

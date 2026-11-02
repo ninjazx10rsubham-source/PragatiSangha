@@ -52,7 +52,7 @@ if (fs.existsSync(distHtml)) {
 }
 
 // 5. Ensure images in dist
-for (const imgName of ['maa_shyama_bg.jpg', 'maa_shyama.jpg']) {
+for (const imgName of ['maa_kali_full_bg.jpg', 'maa_shyama_bg.jpg', 'maa_shyama.jpg']) {
   const rootImg = path.join(rootDir, imgName);
   const distImg = path.join(distDir, imgName);
   if (fs.existsSync(rootImg)) {

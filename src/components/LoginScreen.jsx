@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, Eye, EyeOff, ShieldCheck, Globe, Database, ArrowRight } from 'lucide-react';
 import { MAA_SHYAMA_IMG } from '../assets/maaShyamaImage';
+import { MAA_SHYAMA_FULL_BG } from '../assets/maaShyamaFullBg';
 
 export default function LoginScreen({ onLogin, onOpenPublic, clubName, eventName, storedPin }) {
   const [password, setPassword] = useState('');
@@ -23,17 +24,12 @@ export default function LoginScreen({ onLogin, onOpenPublic, clubName, eventName
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-[#2D0A10] via-[#4A0E17] to-[#1E050A] px-4 py-8">
-      {/* Divine Watermark Background in Login Screen */}
-      <div 
-        className="fixed inset-0 pointer-events-none z-0 flex items-center justify-center overflow-hidden" 
-        aria-hidden="true"
-      >
-        <div 
-          className="w-full h-full max-w-lg max-h-[80vh] bg-contain bg-center bg-no-repeat opacity-[0.14] filter brightness-110 drop-shadow-2xl transition-all duration-700"
-          style={{ backgroundImage: `url(${MAA_SHYAMA_IMG})` }}
-        />
-      </div>
+    <div 
+      className="min-h-screen w-full flex items-center justify-center relative overflow-hidden bg-cover bg-center bg-no-repeat px-4 py-8"
+      style={{ 
+        backgroundImage: `linear-gradient(to bottom, rgba(20, 5, 8, 0.45), rgba(45, 10, 16, 0.58), rgba(20, 5, 8, 0.75)), url(${MAA_SHYAMA_FULL_BG})` 
+      }}
+    >
 
       {/* Decorative background glow */}
       <div className="absolute top-10 left-10 w-72 h-72 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
