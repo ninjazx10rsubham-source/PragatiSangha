@@ -5,6 +5,7 @@ import Toast from './components/Toast';
 import ReceiptModal from './components/ReceiptModal';
 import LoginScreen from './components/LoginScreen';
 import WelcomeSplash from './components/WelcomeSplash';
+import { MAA_SHYAMA_IMG } from './assets/maaShyamaImage';
 
 // Pages
 import DashboardPage from './pages/DashboardPage';
@@ -367,7 +368,17 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FDF8EA] text-[#2D1810] flex flex-col font-bengali">
+    <div className="min-h-screen bg-[#FDF8EA] text-[#2D1810] flex flex-col font-bengali relative overflow-x-hidden">
+      {/* Divine Watermark Background across the whole website */}
+      <div 
+        className="shyama-watermark" 
+        aria-hidden="true"
+      >
+        <div 
+          className="shyama-watermark-inner"
+          style={{ backgroundImage: `url(${MAA_SHYAMA_IMG})` }}
+        />
+      </div>
       {/* Startup Opening Animation with Maa Shyama Photo */}
       {showSplash && (
         <WelcomeSplash

@@ -24,6 +24,17 @@ export default function LoginScreen({ onLogin, onOpenPublic, clubName, eventName
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-[#2D0A10] via-[#4A0E17] to-[#1E050A] px-4 py-8">
+      {/* Divine Watermark Background in Login Screen */}
+      <div 
+        className="fixed inset-0 pointer-events-none z-0 flex items-center justify-center overflow-hidden" 
+        aria-hidden="true"
+      >
+        <div 
+          className="w-full h-full max-w-lg max-h-[80vh] bg-contain bg-center bg-no-repeat opacity-[0.14] filter brightness-110 drop-shadow-2xl transition-all duration-700"
+          style={{ backgroundImage: `url(${MAA_SHYAMA_IMG})` }}
+        />
+      </div>
+
       {/* Decorative background glow */}
       <div className="absolute top-10 left-10 w-72 h-72 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full bg-[#800020]/25 blur-3xl pointer-events-none" />

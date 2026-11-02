@@ -8,6 +8,132 @@
   }
 }
 
+/* ============================================================
+   Divine Watermark Styles
+   ============================================================ */
+.shyama-watermark {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.shyama-watermark-inner {
+  width: 100%;
+  height: 100%;
+  max-width: 820px;
+  max-height: 85vh;
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  opacity: 0.085;
+  filter: drop-shadow(0 0 35px rgba(212, 175, 55, 0.35));
+  transition: opacity 0.6s ease;
+}
+
+/* ============================================================
+   Global Interactive Hover Effects Across Entire Website
+   ============================================================ */
+
+/* 1. Universal Card Hover Elevation & Subtle Glow */
+.bg-\[\#FFFDF7\],
+.bg-white,
+[class*="rounded-2xl"],
+[class*="rounded-3xl"] {
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), 
+              box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1), 
+              border-color 0.25s ease !important;
+}
+
+/* Elevate interactive and surface cards on hover */
+.bg-\[\#FFFDF7\]:hover,
+.bg-white:hover {
+  box-shadow: 0 12px 28px -5px rgba(74, 14, 23, 0.09), 0 6px 14px -3px rgba(212, 175, 55, 0.15) !important;
+}
+
+/* Clickable cards lift on hover */
+.cursor-pointer:hover {
+  transform: translateY(-3px) scale(1.006) !important;
+  box-shadow: 0 16px 32px -6px rgba(74, 14, 23, 0.14), 0 8px 16px -4px rgba(212, 175, 55, 0.2) !important;
+}
+
+/* 2. Interactive Buttons with Modern Festive Pop */
+button {
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.18s ease,
+              filter 0.18s ease,
+              background-color 0.18s ease !important;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-1.5px) !important;
+  filter: brightness(1.05) !important;
+  box-shadow: 0 6px 18px -2px rgba(128, 0, 32, 0.25) !important;
+}
+
+button:active:not(:disabled) {
+  transform: translateY(0.5px) scale(0.97) !important;
+  box-shadow: 0 2px 6px -1px rgba(128, 0, 32, 0.2) !important;
+}
+
+/* 3. Table Rows Smooth Hover Highlight */
+table tbody tr {
+  transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), 
+              transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.18s ease !important;
+}
+
+table tbody tr:hover {
+  background-color: rgba(247, 238, 211, 0.75) !important;
+  transform: scale(1.002);
+  position: relative;
+  z-index: 5;
+}
+
+/* 4. Badges, Chips & Pills Hover Animation */
+span[class*="rounded-full"],
+span[class*="rounded-md"],
+span[class*="rounded-lg"] {
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), 
+              box-shadow 0.18s ease !important;
+}
+
+span[class*="rounded-full"]:hover,
+span[class*="rounded-md"]:hover {
+  transform: translateY(-1px) scale(1.04);
+}
+
+/* 5. Inputs, Selects & Textareas Hover/Focus Glow */
+input, select, textarea {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, transform 0.15s ease !important;
+}
+
+input:hover, select:hover, textarea:hover {
+  border-color: #800020 !important;
+}
+
+/* 6. Sidebar Navigation Items Smooth Slide Hover */
+aside button, aside a {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease !important;
+}
+
+aside button:hover, aside a:hover {
+  transform: translateX(5px) !important;
+}
+
+/* 7. Image Avatars and Icons Gentle Scale on Hover */
+img {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), filter 0.35s ease !important;
+}
+
+img:hover {
+  transform: scale(1.04);
+}
+
 /* Custom festive scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
@@ -71,6 +197,10 @@
     print-color-adjust: exact !important;
   }
 
+  .shyama-watermark {
+    display: none !important;
+  }
+
   .no-print {
     display: none !important;
   }
@@ -79,7 +209,6 @@
     display: block !important;
   }
 
-  /* When schedule printing modal is active, hide everything else */
   body.schedule-printing-active #root > div > header,
   body.schedule-printing-active #root > div > div > main,
   body.schedule-printing-active #root > div > div > aside {
@@ -95,7 +224,6 @@
     width: 100% !important;
   }
 
-  /* When receipt modal is active, hide everything else */
   body.receipt-printing-active #root > div > header,
   body.receipt-printing-active #root > div > div > main,
   body.receipt-printing-active #root > div > div > aside {

@@ -51,7 +51,16 @@ if (fs.existsSync(distHtml)) {
   console.log('✅ root index.html and 404.html updated with compiled production bundle!');
 }
 
-// 5. Ensure .nojekyll in both root and dist
+// 5. Ensure images in dist
+for (const imgName of ['maa_shyama_bg.jpg', 'maa_shyama.jpg']) {
+  const rootImg = path.join(rootDir, imgName);
+  const distImg = path.join(distDir, imgName);
+  if (fs.existsSync(rootImg)) {
+    fs.copyFileSync(rootImg, distImg);
+  }
+}
+
+// 6. Ensure .nojekyll in both root and dist
 fs.writeFileSync(path.join(rootDir, '.nojekyll'), '');
 fs.writeFileSync(path.join(distDir, '.nojekyll'), '');
 
