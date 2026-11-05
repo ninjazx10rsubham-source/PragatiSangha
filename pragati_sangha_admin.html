@@ -736,6 +736,7 @@ function MembersPage() {
   const { db, updateDB, showToast, membershipTypes } = useApp();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("সবাই");
+  const [typeFilter, setTypeFilter] = useState("সব");
   const [modal, setModal] = useState(null); // {type, member}
   const [confirmDelete, setConfirmDelete] = useState(null);
 
@@ -748,6 +749,13 @@ function MembersPage() {
       return matchesSearch && matchesFilter;
     });
   }, [db.members, search, filter]);
+
+  const normType = (t) => {
+    if (!t) return "অন্যান্য";
+    const n = String(t).normalize("NFC").trim();
+    if (n.includes("পাড়া") || n.includes("পাড়া") || n.includes("নাগরিক")) return "পাড়ার নাগরিক বৃন্দ";
+    return n;
+  };
 
   const deriveStatus = (নির্ধারিতচাঁদা, জমা) => {
     if (জমা <= 0) return "বাকি";
@@ -832,12 +840,102 @@ function MembersPage() {
     <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold text-[#3a1210]">সদস্য ও চাঁদা</h1>
-        <PrimaryButton onClick={() => setModal({ type: "add" })} icon={<Plus size={18} />}>
-          নাগরিক বৃন্দ ও চাঁদা
-        </PrimaryButton>
+        <div className="flex items-center gap-2 no-print">
+          <button
+            onClick={() => window.print()}
+            className="px-4 py-2 rounded-xl bg-[#3a1210] hover:bg-[#5a2420] text-[#f8ecd0] text-sm font-bold flex items-center gap-1.5 shadow"
+          >
+            🖨️ তালিকা প্রিন্ট করুন
+          </button>
+          <PrimaryButton onClick={() => setModal({ type: "add" })} icon={<Plus size={18} />}>
+            নাগরিক বৃন্দ ও চাঁদা
+          </PrimaryButton>
+        </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 mb-5">
+      {/* দিন অনুযায়ী মোট চাঁদা জমার খাতা (তারিখভিত্তিক যোগফল) */}
+      <div className="mb-6 rounded-2xl border-2 border-[#e4d3a8] bg-[#fffcf5] p-4 sm:p-5 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 border-b border-[#f0e4c4] pb-2">
+          <h3 className="font-bold text-[#3a1210] text-base flex items-center gap-2">
+            <span>📅 দিন অনুযায়ী মোট চাঁদা জমার খাতা</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-[#7a1f2b]/10 text-[#7a1f2b] font-semibold">Daily Sum Register</span>
+          </h3>
+          <span className="text-sm font-bold text-[#7a1f2b]">
+            সর্বমোট আদায়: {formatTaka(dailyBreakdown.reduce((s, x) => s + x.total, 0))}
+          </span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-[#f1e6c8] text-[#5a4021]">
+              <tr>
+                <th className="px-4 py-2.5 text-left">ক্রমিক</th>
+                <th className="px-4 py-2.5 text-left">তারিখ (Date)</th>
+                <th className="px-4 py-2.5 text-center">মোট রসিদ / সংখ্যা</th>
+                <th className="px-4 py-2.5 text-right">ওই দিনের মোট টাকা (Sum)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dailyBreakdown.length === 0 ? (
+                <tr>
+                  <td colSpan="4" className="py-4 text-center text-stone-400">এখনও কোনো চাঁদা জমার তথ্য পাওয়া যায়নি।</td>
+                </tr>
+              ) : (
+                dailyBreakdown.map((item, idx) => (
+                  <tr key={item.date} className="border-b border-[#f0e4c4] hover:bg-[#fdf8ea]">
+                    <td className="px-4 py-2.5 font-mono text-stone-500 font-bold">{toBnDigits(idx + 1)}</td>
+                    <td className="px-4 py-2.5 font-bold text-[#3a1210]">📅 {item.date}</td>
+                    <td className="px-4 py-2.5 text-center font-bold text-[#5a4021]">{toBnDigits(item.count)} টি</td>
+                    <td className="px-4 py-2.5 text-right font-black text-[#7a1f2b] text-base">{formatTaka(item.total)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+            {dailyBreakdown.length > 0 && (
+              <tfoot className="bg-[#f1e6c8] font-bold text-[#3a1210]">
+                <tr>
+                  <td colSpan="2" className="px-4 py-2.5 text-center">সর্বমোট যোগফল (Grand Total Sum)</td>
+                  <td className="px-4 py-2.5 text-center">{toBnDigits(dailyBreakdown.reduce((s, x) => s + x.count, 0))} টি</td>
+                  <td className="px-4 py-2.5 text-right font-black text-[#7a1f2b] text-base">{formatTaka(dailyBreakdown.reduce((s, x) => s + x.total, 0))}</td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
+      </div>
+
+
+      {/* সদস্যপদের ধরন অনুযায়ী আলাদা ট্যাব */}
+      <div className="rounded-2xl bg-[#fffcf5] p-4 border border-[#e0cfa0] mb-4 shadow-sm no-print">
+        <div className="text-sm font-bold text-[#3a1210] mb-2.5 flex items-center justify-between">
+          <span>🏷️ সদস্যপদের ধরন অনুযায়ী আলাদা তালিকা দেখুন:</span>
+          <span className="text-xs text-[#7a1f2b] font-bold">তালিকায়: {toBnDigits(filtered.length)} জন</span>
+        </div>
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {[
+            { id: "সব", label: "সব সদস্যবৃন্দ", count: db.members.length },
+            { id: "পাড়ার নাগরিক বৃন্দ", label: "পাড়ার সদস্যবৃন্দ", count: db.members.filter(m => normType(m.ধরন) === "পাড়ার নাগরিক বৃন্দ").length },
+            { id: "সহযোগী সদস্য", label: "সহযোগী সদস্যবৃন্দ", count: db.members.filter(m => normType(m.ধরন) === "সহযোগী সদস্য").length },
+            { id: "সক্রিয় সদস্য", label: "সক্রিয় সদস্যবৃন্দ", count: db.members.filter(m => normType(m.ধরন) === "সক্রিয় সদস্য").length }
+          ].map(t => (
+            <button
+              key={t.id}
+              onClick={() => setTypeFilter(t.id)}
+              className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors flex items-center gap-2 ${
+                typeFilter === t.id
+                  ? "bg-[#7a1f2b] text-[#f8ecd0] shadow"
+                  : "bg-white border border-[#e0cfa0] text-[#5a4021] hover:bg-[#f1e6c8]"
+              }`}
+            >
+              <span>{t.label}</span>
+              <span className={`px-2 py-0.5 rounded-full text-xs font-mono font-bold ${
+                typeFilter === t.id ? "bg-amber-400 text-black" : "bg-stone-100 text-stone-700"
+              }`}>{toBnDigits(t.count)}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-3 mb-5 no-print">
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a17c46]" size={18} />
           <input
@@ -866,8 +964,15 @@ function MembersPage() {
         <EmptyState text={db.members.length === 0 ? "এখনও কোনো সদস্য যোগ করা হয়নি।" : "কোনো ফলাফল পাওয়া যায়নি।"} />
       ) : (
         <>
+          {/* Printable Header */}
+          <div className="hidden print:block text-center border-b-2 border-[#7a1f2b] pb-4 mb-4">
+            <h2 className="text-2xl font-bold text-[#3a1210]">প্রগতি সংঘ শ্রী শ্রী শ্যামা পূজা ২০২৬</h2>
+            <p className="text-base font-bold text-[#7a1f2b] mt-1">{typeFilter === "সব" ? "সকল সদস্যবৃন্দ — চাঁদা ও সদস্য তালিকা" : typeFilter + " — চাঁদা ও সদস্য তালিকা"}</p>
+            <p className="text-xs text-stone-600 mt-1">মোট সদস্য: {toBnDigits(filtered.length)} জন | প্রিন্ট তারিখ: {new Date().toLocaleDateString('en-GB')}</p>
+          </div>
+
           {/* Desktop table */}
-          <div className="hidden md:block rounded-2xl border border-[#e4d3a8] overflow-hidden bg-[#fffcf5]">
+          <div className="hidden md:block rounded-2xl border border-[#e4d3a8] overflow-hidden bg-[#fffcf5] print:block">
             <table className="w-full text-sm">
               <thead className="bg-[#f1e6c8] text-[#5a4021]">
                 <tr>
@@ -1038,6 +1143,27 @@ function MarketForm({ initial, categories, onSubmit, onCancel }) {
 
 function MarketPage() {
   const { db, updateDB, showToast } = useApp();
+
+  // দিন অনুযায়ী মোট চাঁদা জমার খাতা
+  const dailyBreakdown = React.useMemo(() => {
+    const map = {};
+    const list = (db.payments && db.payments.length > 0) ? db.payments : (db.members || []).filter(m => m.জমা > 0).map(m => ({
+      date: m.তারিখ || "অজানা",
+      amount: m.জমা,
+      name: m.নাম
+    }));
+    list.forEach(p => {
+      const d = p.date || p.payment_date || p.তারিখ || "অজানা";
+      const amt = Number(p.amount || p.জমা) || 0;
+      if (amt > 0) {
+        if (!map[d]) map[d] = { date: d, total: 0, count: 0 };
+        map[d].total += amt;
+        map[d].count += 1;
+      }
+    });
+    return Object.values(map).sort((a, b) => b.date.localeCompare(a.date));
+  }, [db.payments, db.members]);
+
   const [modal, setModal] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [search, setSearch] = useState("");

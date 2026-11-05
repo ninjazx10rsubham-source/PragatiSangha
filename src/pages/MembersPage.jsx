@@ -37,11 +37,22 @@ import { formatTaka, toBnDigits } from '../utils/formatters';
 import { exportMembersToExcel, exportPreviousYearMembersToExcel, getWhatsAppDueReminderUrl } from '../services/exportService';
 import { deleteMemberFromSupabase, deletePreviousYearMemberFromSupabase, defaultPreviousYearMembers, getNextReceiptNo } from '../services/dataService';
 import { getMemberBillNo, encodeMemberBillNo, matchMemberBillNo } from '../utils/billHelper';
+
+export function normalizeMemberType(type) {
+  if (!type) return 'অন্যান্য';
+  const norm = String(type).normalize('NFC').trim();
+  if (norm.includes('পাড়া') || norm.includes('পাড়া') || norm.includes('নাগরিক')) {
+    return 'পাড়ার নাগরিক বৃন্দ';
+  }
+  return norm;
+}
+
 export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }) {
   const [activeMainTab, setActiveMainTab] = useState('current'); // Show current members where all 205 members are listed!
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('সবাই');
   const [diffFilter, setDiffFilter] = useState('সব'); // 'সব', 'বৃদ্ধি', 'হ্রাস', 'একই', 'নতুন'
+  const [memberTypeFilter, setMemberTypeFilter] = useState('সব'); // 'সব', 'পাড়ার নাগরিক বৃন্দ', 'সহযোগী সদস্য', 'সক্রিয় সদস্য'
   const [prevSearch, setPrevSearch] = useState('');
   const [modalState, setModalState] = useState(null); // { type: 'add' | 'edit' | 'pay' | 'delete' | 'add_prev' | 'edit_prev' | 'delete_prev', member, prevRecord }
   const [autoFilledNotice, setAutoFilledNotice] = useState(null);
@@ -99,6 +110,20 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
       );
     });
   }, [previousYearList, prevSearch]);
+  // Member Type Statistics (NFC normalized)
+  const memberTypeStats = useMemo(() => {
+    const counts = { 'সব': members.length };
+    members.forEach(m => {
+      const t = normalizeMemberType(m.member_type);
+      counts[t] = (counts[t] || 0) + 1;
+    });
+    return counts;
+  }, [members]);
+
+  const handlePrintMembers = () => {
+    window.print();
+  };
+
   // Archive counts
   const archiveTotalCount = previousYearList.length;
   const archiveImportedCount = previousYearList.filter(p => currentMembersMap.has(p.name.trim().toLowerCase())).length;
@@ -135,6 +160,11 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
         matchMemberBillNo(m, search);
       
       const matchesStatus = statusFilter === 'সবাই' || m.status === statusFilter;
+      const matchesType = (() => {
+        if (memberTypeFilter === 'সব') return true;
+        return normalizeMemberType(m.member_type) === normalizeMemberType(memberTypeFilter);
+      })();
+
       const prev = Number(m.previous_year_amount) || 0;
       const curr = Number(m.target_amount) || 0;
       const diff = curr - prev;
@@ -143,9 +173,9 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
       else if (diffFilter === 'হ্রাস') matchesDiff = prev > 0 && diff < 0;
       else if (diffFilter === 'একই') matchesDiff = prev > 0 && diff === 0;
       else if (diffFilter === 'নতুন') matchesDiff = prev === 0;
-      return matchesSearch && matchesStatus && matchesDiff;
+      return matchesSearch && matchesStatus && matchesType && matchesDiff;
     });
-  }, [members, search, statusFilter, diffFilter]);
+  }, [members, search, statusFilter, memberTypeFilter, diffFilter]);
   const deriveStatus = (target, collected) => {
     if (collected <= 0) return 'বাকি';
     if (collected >= target) return 'জমা হয়েছে';
@@ -495,9 +525,22 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
             পূর্ববর্তী বছরের তুলনা, চাঁদা বৃদ্ধি/হ্রাস ট্র্যাকিং, অটো-ফেচ ও খাতা সম্পাদনা
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 no-print">
           <button
-            onClick={() => exportMembersToExcel(members)}
+            onClick={handlePrintMembers}
+            className="px-3.5 py-2 rounded-xl bg-[#4A0E17] hover:bg-[#6b1421] text-amber-300 border border-[#4A0E17] text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+            title="সদস্য তালিকা প্রিন্ট করুন"
+          >
+            <Printer size={15} />
+            <span>তালিকা প্রিন্ট করুন</span>
+          </button>
+          <button
+            onClick={() => {
+              const filename = memberTypeFilter === 'সব' 
+                ? 'প্রগতি_সংঘ_সকল_সদস্য_তালিকা' 
+                : `প্রগতি_সংঘ_${memberTypeFilter.replace(/\s+/g, '_')}_তালিকা`;
+              exportMembersToExcel(filteredMembers, filename);
+            }}
             className="px-3.5 py-2 rounded-xl bg-[#FFFDF7] hover:bg-[#F2E5C9] text-stone-700 border border-[#EADBB6] text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
           >
             <Download size={15} />
@@ -505,7 +548,7 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
           </button>
           <button
             onClick={() => handleOpenAdd()}
-            className="px-4 py-2 rounded-xl bg-[#4A0E17] hover:bg-[#6b1421] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-md"
+            className="px-4 py-2 rounded-xl bg-[#800020] hover:bg-[#6b1421] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-md"
           >
             <Plus size={16} />
             <span>নতুন সদস্য যোগ করুন</span>
@@ -515,7 +558,7 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
       {/* CURRENT YEAR MEMBERS & COLLECTIONS */}
       <div className="space-y-6">
           {/* Comparison KPI Summary Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 no-print">
             <div className="p-4 rounded-2xl bg-[#FFFDF7] border border-[#EADBB6] shadow-xs">
               <span className="text-xs font-bold text-stone-500 uppercase block">মোট সদস্য</span>
               <p className="text-xl sm:text-2xl font-extrabold text-[#4A0E17] mt-1">{toBnDigits(members.length)} জন</p>
@@ -549,10 +592,64 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
             </div>
           </div>
           {/* Dedicated Section: দিন অনুযায়ী মোট চাঁদা জমার খাতা */}
-          <DailyCollectionSection payments={db.payments || []} />
+          <div className="no-print">
+            <DailyCollectionSection payments={db.payments || []} />
+          </div>
+
+          {/* Membership Type Category Filter Tabs (সদস্যপদের ধরন অনুযায়ী আলাদা করার সেকশন) */}
+          <div className="rounded-2xl bg-[#FFFDF7] p-3.5 border-2 border-[#EADBB6] shadow-sm space-y-2.5 no-print">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="text-xs sm:text-sm font-black text-[#4A0E17] flex items-center gap-1.5">
+                <span>🏷️ সদস্যপদের ধরন অনুযায়ী তালিকা দেখুন:</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-stone-600">
+                  নির্বাচিত ক্যাটাগরিতে মোট: <b className="text-[#800020] font-mono text-sm">{toBnDigits(filteredMembers.length)} জন</b>
+                </span>
+                <button
+                  onClick={handlePrintMembers}
+                  className="px-2.5 py-1 rounded-lg bg-[#4A0E17] hover:bg-[#6b1421] text-amber-300 text-xs font-bold transition flex items-center gap-1"
+                >
+                  <Printer size={13} />
+                  <span>প্রিন্ট</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              {[
+                { id: 'সব', label: 'সব সদস্যবৃন্দ', icon: '👥' },
+                { id: 'পাড়ার নাগরিক বৃন্দ', label: 'পাড়ার সদস্যবৃন্দ', icon: '🏠', badge: 'প্রধান' },
+                { id: 'সহযোগী সদস্য', label: 'সহযোগী সদস্যবৃন্দ', icon: '🤝' },
+                { id: 'সক্রিয় সদস্য', label: 'সক্রিয় সদস্যবৃন্দ', icon: '⚡' }
+              ].map((tab) => {
+                const count = memberTypeStats[tab.id] || 0;
+                const isSelected = memberTypeFilter === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setMemberTypeFilter(tab.id)}
+                    className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 whitespace-nowrap shadow-xs ${
+                      isSelected
+                        ? 'bg-[#4A0E17] text-white ring-2 ring-[#800020]/40 shadow-md scale-[1.02]'
+                        : 'bg-white text-stone-700 hover:bg-[#F2E5C9] border border-stone-200 hover:border-[#800020]'
+                    }`}
+                  >
+                    <span>{tab.icon}</span>
+                    <span>{tab.label}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-mono font-black ${
+                      isSelected ? 'bg-amber-400 text-[#4A0E17]' : 'bg-stone-100 text-stone-700 border border-stone-200'
+                    }`}>
+                      {toBnDigits(count)} জন
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
           {/* Filter and Search Bar */}
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row gap-3 no-print">
             <div className="relative flex-1">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" size={17} />
               <input
@@ -602,8 +699,35 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
               ))}
             </div>
           </div>
+          {/* Printable Official Letterhead (Visible ONLY on Print) */}
+          <div className="hidden print:block mb-5 text-center border-b-2 border-[#800020] pb-4">
+            <div className="text-xs font-semibold text-[#800020] tracking-widest mb-1">
+              ।। ওঁ শ্রী শ্রী শ্যামা পূজায়ৈ নমঃ ।।
+            </div>
+            <h1 className="text-2xl font-black text-[#4A0E17]">
+              {db.settings?.club_name || 'প্রগতি সংঘ'}
+            </h1>
+            <p className="text-sm font-bold text-amber-900 mt-0.5">
+              {db.settings?.event_name || 'শ্রী শ্রী শ্যামা পূজা ২০২৬'}
+            </p>
+            <div className="mt-2 py-1 px-4 bg-amber-50 rounded-lg inline-block border border-amber-300">
+              <span className="text-base font-extrabold text-[#4A0E17]">
+                {memberTypeFilter === 'সব' 
+                  ? 'সকল সদস্যবৃন্দ — চাঁদা ও সদস্য পূর্ণাঙ্গ খাতা' 
+                  : `${memberTypeFilter} — চাঁদা ও সদস্য খাতা`}
+              </span>
+            </div>
+            <div className="grid grid-cols-5 gap-2 text-xs text-stone-700 mt-3 pt-2 border-t border-stone-300 text-center font-medium">
+              <div>মোট সদস্য: <b className="text-black font-mono">{toBnDigits(filteredMembers.length)} জন</b></div>
+              <div>নির্ধারিত চাঁদা: <b className="text-black font-mono">{formatTaka(filteredMembers.reduce((s, m) => s + (Number(m.target_amount) || 0), 0))}</b></div>
+              <div>মোট আদায়: <b className="text-emerald-800 font-mono">{formatTaka(filteredMembers.reduce((s, m) => s + (Number(m.collected_amount) || 0), 0))}</b></div>
+              <div>মোট বকেয়া: <b className="text-rose-800 font-mono">{formatTaka(filteredMembers.reduce((s, m) => s + Math.max(0, (Number(m.target_amount) || 0) - (Number(m.collected_amount) || 0)), 0))}</b></div>
+              <div>প্রিন্টের তারিখ: <b className="font-mono">{new Date().toLocaleDateString('en-GB')}</b></div>
+            </div>
+          </div>
+
           {/* Members Table */}
-          <div className="bg-[#FFFDF7] rounded-2xl border border-[#EADBB6] shadow-sm overflow-hidden">
+          <div className="bg-[#FFFDF7] rounded-2xl border border-[#EADBB6] shadow-sm overflow-hidden print:border-none print:shadow-none print:rounded-none">
             {filteredMembers.length === 0 ? (
               <div className="p-12 text-center text-stone-500 text-sm">
                 কোনো সদস্য খুঁজে পাওয়া যায়নি।
@@ -622,7 +746,8 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                       <th className="py-3 px-4">মোট জমা</th>
                       <th className="py-3 px-4">বাকি</th>
                       <th className="py-3 px-4">স্ট্যাটাস</th>
-                      <th className="py-3 px-4 text-right">অ্যাকশন</th>
+                      <th className="py-3 px-4 text-right no-print">অ্যাকশন</th>
+                      <th className="py-3 px-3 text-center hidden print:table-cell text-xs">দাতার স্বাক্ষর</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-stone-100">
@@ -716,7 +841,10 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                               <span>{m.status}</span>
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-right">
+                          <td className="py-3 px-3 text-center hidden print:table-cell">
+                            <div className="w-16 border-b border-stone-400 mx-auto mt-3"></div>
+                          </td>
+                          <td className="py-3 px-4 text-right no-print">
                             <div className="flex items-center justify-end gap-1.5">
                               {/* Pay Button */}
                               <button
@@ -764,6 +892,25 @@ export default function MembersPage({ db, onUpdateDB, showToast, onOpenReceipt }
                 </table>
               </div>
             )}
+          </div>
+
+          {/* Printable Official Signatures Block (Visible ONLY on Print) */}
+          <div className="hidden print:grid grid-cols-3 gap-6 text-center text-xs text-stone-800 mt-14 pt-8 border-t border-stone-400">
+            <div>
+              <div className="w-36 border-b border-stone-800 mx-auto mb-1"></div>
+              <p className="font-bold text-stone-900">সভাপতি</p>
+              <p className="text-[10px] text-stone-500">প্রগতি সংঘ</p>
+            </div>
+            <div>
+              <div className="w-36 border-b border-stone-800 mx-auto mb-1"></div>
+              <p className="font-bold text-stone-900">সাধারণ সম্পাদক</p>
+              <p className="text-[10px] text-stone-500">পূজা কমিটি</p>
+            </div>
+            <div>
+              <div className="w-36 border-b border-stone-800 mx-auto mb-1"></div>
+              <p className="font-bold text-stone-900">কোষাধ্যক্ষ</p>
+              <p className="text-[10px] text-stone-500">অর্থ ও হিসাব</p>
+            </div>
           </div>
         </div>
       {/* Add / Edit Current Year Member Modal */}

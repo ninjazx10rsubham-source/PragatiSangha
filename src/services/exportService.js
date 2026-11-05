@@ -8,7 +8,7 @@ export function exportToExcel(data, filename, sheetName = 'Sheet1') {
   XLSX.writeFile(wb, `${filename}.xlsx`);
 }
 
-export function exportMembersToExcel(members) {
+export function exportMembersToExcel(members, customFilename = 'প্রগতি_সংঘ_সদস্য_ও_চাঁদা_তালিকা', sheetName = 'সদস্য তালিকা') {
   const formatted = members.map((m, idx) => {
     const prev = Number(m.previous_year_amount) || 0;
     const curr = Number(m.target_amount) || 0;
@@ -35,7 +35,7 @@ export function exportMembersToExcel(members) {
     };
   });
 
-  exportToExcel(formatted, 'প্রগতি_সংঘ_সদস্য_ও_চাঁদা_তালিকা', 'সদস্য তালিকা');
+  exportToExcel(formatted, customFilename, sheetName);
 }
 
 export function exportPreviousYearMembersToExcel(previousYearMembers) {
