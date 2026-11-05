@@ -1,7 +1,8 @@
 import DailyCollectionSection from '../components/DailyCollectionSection';
 import React, { useState, useMemo } from 'react';
 import { 
-  Users, 
+  Users,
+  Printer, 
   Search, 
   Plus, 
   Edit3, 
